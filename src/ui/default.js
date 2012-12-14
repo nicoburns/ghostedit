@@ -177,6 +177,10 @@
 					break;
 				}
 				if(node.tagName && node.tagName.toLowerCase() === "a") {
+					if(ghostedit.plugins.link.focusedlink) {
+						document.getElementById('ghostedit_defaultui_textfield_linkurl').value = (ghostedit.plugins.link.focusedlink.href == "http:") ? "http://" : ghostedit.plugins.link.focusedlink.href;
+					}
+					
 					ghostedit.event.trigger("ui:newcontext", {context: "link"});
 					break;
 				}				

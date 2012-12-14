@@ -3,7 +3,7 @@
 	var _link = {
 		focusedlink: false,
 		el: {}
-	}
+	};
 	
 	
 	_link.enable = function () {
@@ -25,11 +25,19 @@
 		ghostedit.api.link.create = function () {
 			return _link.create();
 		}
-	},
+		
+		ghostedit.api.link.updateurl = function (url) {
+			return _link.updateurl(url);
+		}
+		
+		ghostedit.api.link.open = function () {
+			return _link.open();
+		}
+	};
 	
 	_link.ghostevent = function (event, target, source, params) {
 		return false;
-	}
+	};
 		
 	_link.event = {
 		urlBoxKeypress: function (e) {
@@ -107,13 +115,13 @@
 				ghostedit.selection.save();
 			}
 		}
-	}
+	};
 	
 	_link.selection = {
 		deleteContents: function () {
 			return false;
 		}
-	}
+	};
 	
 	_link.ui = {
 		update: function () {
@@ -189,7 +197,7 @@
 			_link.el.focusedbox = null;
 			_link.el.focusedboxa = null;
 		}
-	}
+	};
 	
 	_link.create = function (url) {
 		ghostedit.history.saveUndoState();
@@ -215,7 +223,7 @@
 		
 		ghostedit.selection.save();
 		ghostedit.history.saveUndoState();
-	}
+	};
 	
 	_link.focus = function (link) {
 		var linkbox, linkIdNum, left, linkbounds, linkboxa;
@@ -226,16 +234,15 @@
 		// Show the 'remove link' box
 		_link.ui.show(link);
 			
-		//document.getElementById('ghostedit_toolbar_linkurl').value = (link.href == "http:") ? "http://" : link.href;
 		ghostedit.event.trigger("ui:newcontext", {context: "link"});
-	}
+	};
 	
 	_link.unfocus = function () {
 		if (_link.focusedlink === false) return;
 		
 		_link.ui.hide();
 		_link.focusedlink = false;
-	}
+	};
 	
 	_link.remove = function (link) {
 		var range, linkcontent;
@@ -248,8 +255,6 @@
 		range.collapseToEnd().select();
 		_link.unfocus();*/
 		
-		console.log("test");
-		
 		ghostedit.selection.saved.data.saveToDOM();
 		linkcontent = ghostedit.dom.extractContent(link);
 		link.parentNode.insertBefore (linkcontent, link);
@@ -257,21 +262,21 @@
 		
 		ghostedit.selection.saved.data.restoreFromDOM().select();
 		ghostedit.selection.save();
-	}
+	};
 	
 	_link.updateurl = function (newurl) {
 		if (_link.focusedlink != false && _link.focusedlink.href != newurl) {
 			_link.focusedlink.href = newurl;
 			_link.focusedlink.title = newurl;
-			ghostedit.ui.message.show("URL updated to '" + newurl + "'", 2, "success");
+			ghostedit.event.trigger("ui:message", {message:"URL updated to '" + newurl + "'", time: 2, color: "success"});
 		}
-	}
+	};
 	
 	_link.open = function () {
 		if (_link.focusedlink != false) {
 			window.open(_link.focusedlink.href);
 		}
-	}
+	};
 	
 	ghostedit.api.plugin.register("link", _link);
 })(window);
