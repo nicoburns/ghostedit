@@ -23,16 +23,6 @@
 			}
 		});
 		
-		ghostedit.event.addListener ("selection:change", function () {
-			var node;
-			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
-				node = ghostedit.selection.nodepath[i];
-				if(_textblock.isTextBlock(node)) {
-					ghostedit.event.trigger("ui:newcontext", {context: "textblock"});
-				}
-			}
-		});
-		
 		ghostedit.api.insert = ghostedit.api.insert || {};
 		ghostedit.api.insert.character = function (character) {return _textblock.insert.character(character); }
 		ghostedit.api.insert.br = function () {return _textblock.insert.br; }

@@ -168,6 +168,25 @@
 		ghostedit.event.addListener("ui:message", function (params) { _ui.message.show(params) }, "defaultui");
 		ghostedit.event.addListener ("ui:replace", function () { ghostedit.api.plugin.disable("defaultui"); }, "defaultui");
 		
+		ghostedit.event.addListener ("selection:change", function () {
+			var node;
+			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
+				node = ghostedit.selection.nodepath[i];
+				if(node.tagName && node.tagName.toLowerCase() === "img") {
+					ghostedit.event.trigger("ui:newcontext", {context: "image"});
+					break;
+				}
+				if(node.tagName && node.tagName.toLowerCase() === "a") {
+					ghostedit.event.trigger("ui:newcontext", {context: "link"});
+					break;
+				}				
+				if(ghostedit.plugins.textblock.isTextBlock(node)) {
+					ghostedit.event.trigger("ui:newcontext", {context: "textblock"});
+					break;
+				}
+			}
+		}, "defaultui");
+		
 		ghostedit.event.addListener ("ui:newcontext", function (params) {
 			if (!params.context) return;
 			if (_ui.context && !/textblock|format|insert|save/.test(_ui.context)) {
