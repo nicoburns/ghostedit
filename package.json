@@ -1,0 +1,35 @@
+{
+  "name": "ghostedit",
+  "title": "GhostEdit WYSIWYG editor",
+  "version": "1.0rc1",
+  "homepage": "http://ghosted.it",
+  "author": {
+    "name": "Nico Burns",
+    "email": "nico@nicoburns.com"
+  },
+  "description": "An open source JavaScript WYSIWYG editor focused on usability",
+  "browsersupport": "Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)",
+  "contributors": [ 
+    {
+      "name": "Nico Burns",
+      "email": "nico@nicoburns.com"
+    } 
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicoburns/ghostedit.git"
+  },
+  "dependencies" : {
+    "lasso": "1.4.0"
+  },
+  "devDependencies": {
+    "grunt": "~0.3.17"
+  },
+  "licenses": [
+		{
+			"type": "LGPL",
+			"url": "https://github.com/nicoburns/ghostedit/blob/master/LGPL-LICENSE.txt"
+		}
+	],
+  "keywords": []
+}
