@@ -32,6 +32,26 @@
 			}
 		};
 		
+		_selection.set = function (type, data, updateui) {
+			if (updateui !== false) updateui = true;
+			if (typeof type !== "string") return;
+			
+			// Update selection variables
+			_selection.saved.type = type;
+			_selection.saved.data = data;
+				
+			// Save to legacy variable
+			_selection.savedRange = _selection.saved.data;
+			
+			// Update path information
+			_selection.updatePathInfo();
+			
+			// Send events
+			ghostedit.event.trigger("selection:change");
+			if (updateui) ghostedit.event.trigger("ui:update");
+			return true;
+		}
+		
 		_selection.restore = function (type, data, mustbevalid) {
 			if (!type || typeof type !== "string") type = _selection.saved.type;
 			if (!data) data = _selection.saved.data;
@@ -124,8 +144,8 @@
 		_selection.updatePathInfo = function (elem) {
 			var bold = false, italic = false, underline = false, aelem = false, i, formatboxes;
 			
-			
-			if (!elem) elem = _selection.savedRange.getParentNode();
+			if (!elem) elem = _selection.saved.data;
+			if (!elem.nodeType) elem = elem.getParentNode();
 			
 			// If nodepath is same as before, don't bother calculating it again
 			// below code DOES NOT equal above statement. (dom node can have moved)
@@ -152,8 +172,10 @@
 			}
 		};
 		
-		_selection.getContainingGhostBlock = function () {			
-			var node = _selection.savedRange.getParentNode()
+		_selection.getContainingGhostBlock = function () {
+			var node = _selection.saved.data;
+			if (!node.nodeType) node = node.getParentNode();
+
 			if (!node) return false;
 
 			while (!ghostedit.dom.isGhostBlock(node)) {

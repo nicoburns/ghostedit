@@ -137,7 +137,7 @@
 				{name: "link", label: "Link", enabled: false,
 					contents: [
 					{type: "group", contents: [
-						{type: "textfield", id: "linkurl", label: "Link URL",
+						{type: "textfield", id: "linkurl", label: "Link URL", width: "400px",
 							onkeyup: function () { ghostedit.api.link.updateurl(this.value) } }
 					]},
 					{type: "group", contents: [
@@ -148,7 +148,7 @@
 				{name: "image", label: "Image", enabled: false,
 					contents: [
 					{type: "group", contents: [
-						{type: "textfield", id: "imagealttext", label: "Description / Alt text",
+						{type: "textfield", id: "imagealt", label: "Description / Alt text",
 							onkeyup: function () { ghostedit.api.image.updatealttext(this.value) } }
 					]}
 					]}
@@ -173,6 +173,9 @@
 			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
 				node = ghostedit.selection.nodepath[i];
 				if(node.tagName && node.tagName.toLowerCase() === "img") {
+					if(ghostedit.selection.saved.type === "image") {
+						document.getElementById('ghostedit_defaultui_textfield_imagealt').value = ghostedit.selection.saved.data.alt;
+					}
 					ghostedit.event.trigger("ui:newcontext", {context: "image"});
 					break;
 				}

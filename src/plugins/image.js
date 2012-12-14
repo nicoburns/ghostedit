@@ -604,14 +604,13 @@
 				_image.buttons[i].show(img);
 				_image.buttons[i].reposition(img, _image.buttons[i]);
 			}
-			//img.parentNode.contentEditable = true;
 			
-			ghostedit.selection.saved.type = "image";
+			/*ghostedit.selection.saved.type = "image";
 			ghostedit.selection.saved.data = img;
 			ghostedit.selection.updatePathInfo(img);
-			ghostedit.event.trigger("ui:update");
+			ghostedit.event.trigger("ui:update");*/
+			ghostedit.selection.set("image", img);
 			
-			//restoreSavedSelection();
 			_image.focusedimage = img;
 			
 			ghostedit.event.trigger("ui:newcontext", {context: "image"});
