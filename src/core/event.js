@@ -98,7 +98,7 @@
 		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
 		
 		if (ghostedit.selection.saved.type !== "none" && !ghostedit.selection.savedRange.isCollapsed() && !e.ctrlKey) {
-			ghostedit.selection.deleteContents();
+			ghostedit.selection.deleteContents("collapsetostart");
 		}
 		
 		
