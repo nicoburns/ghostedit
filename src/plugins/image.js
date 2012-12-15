@@ -101,54 +101,6 @@
 				break;
 			}
 			return ghostedit.util.cancelEvent ( e );
-		},
-		
-		insertButtonClick: function () {
-			ghostedit.selection.save();
-			var i, elem, images, modalcontent, insert;
-			modalcontent = "<h2>Insert image</h2><form>" +
-			"<p>This dialog allows you to choose an image to insert into the document. Either select one from the list of uploaded images, or enter a custom url in the box below.</p>" +
-			"<hr />" +
-			//"<h3 style='clear: both;'>Upload new image</h3>" +
-			//"<div id='ghostedit_imageuploadarea'><noscript>noscript</noscript></div>" +
-			//"<hr />" +
-			"<h3 style='clear: both;'>Select uploaded image</h3>" +
-			"<div id='ghostedit_listbox' style='height: 200px;overflow-x: hidden;overflow-y: scroll;background: white; border: 1px solid #ccc'></div>" +
-			"<hr />" +
-			"<h3>Or enter URL</h3>" +
-			"<input type='text' value='' id='ghostedit_imageurlinput' style='width: 99%' /><br />" +
-			"<input type='button' value='Insert' style='float: right;margin-top: 10px;' onclick='_image.newImageBefore(null, null);ghostedit.ui.modal.hide();' />" +
-			"</form>" +
-			"";
-			
-			/*images = [
-			{id: "5", name: "test3", url: "data/pages/images/large/5.jpg", thumburl: ""},
-			{id: "6", name: "test2", url: "data/pages/images/large/6.jpg", thumburl: "data/pages/images/small/6.jpg"}
-			];*/
-			
-			images = [];
-			
-			if(ghostedit.options.uploadedimages) {
-				images = ghostedit.options.uploadedimages;
-			}
-			
-			ghostedit.ui.modal.show(modalcontent);
-			
-			insert = function () {
-				_image.newImageBefore(null, this.getAttribute("ghostedit-listitem-value"), false);
-				ghostedit.ui.modal.hide();
-			};
-			
-			for(i = 0; i < images.length; i += 1) {
-				elem = document.createElement("div");
-				elem.className = "ghostedit-listbox-item";
-				elem.setAttribute("ghostedit-listitem-value", images[i].url);
-				elem.innerHTML = "<img src='" + images[i].thumburl + "' style='height: 60px; float: left' /><p style='margin-left: 100px;font-size: 21px'>" + images[i].name + "</p>";
-				elem.onclick = insert;
-				document.getElementById("ghostedit_listbox").appendChild(elem);
-			}
-			
-			document.getElementById('ghostedit_imageurlinput').focus();
 		}
 	};
 	
@@ -750,14 +702,6 @@
 				//ghostedit.ui.toolbar.disabletab("image");
 		},
 		
-		srcdialog: function () {
-			if (_image.focusedimage !== false) {
-				//_image.focusedimage.alt = newalt;
-				ghostedit.ui.modal.show("<h3>Change Image Source</h3>" + 
-				"yada yada");
-			}
-		},
-		
 		createbutton: function (imgIdNum, name, html, positionfunc) {
 			var button, elem;
 			
@@ -847,7 +791,6 @@
 		imageurlinput = document.getElementById("ghostedit_imageurlinput");
 		imageurlinput.blur();
 		_image.newImageBefore (null, null, false);
-		ghostedit.ui.modal.hide();
 	};
 	
 	_image.create = function (srcURL) {
@@ -890,7 +833,7 @@
 		var that, addedImage, newImg, parent, handler, result, clearval;
 		ghostedit.history.saveUndoState();
 		if (elem === null) { elem = ghostedit.selection.savedRange.getStartNode(); }
-		elem = ghostedit.textblock.selection.getTextBlockNode ( elem );
+		elem = ghostedit.plugins.textblock.selection.getTextBlockNode ( elem );
 		if (wheretoinsert !== "after") wheretoinsert = "before";
 		
 		if (srcURL === null) { srcURL = document.getElementById("ghostedit_imageurlinput").value; }

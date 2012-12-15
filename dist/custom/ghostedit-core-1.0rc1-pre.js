@@ -1250,10 +1250,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		while(true) {
 			
-			if ((target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker)) === true) {
+			if ((target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker))) {
 				direction = "ahead";
 			}
-			else if ((target = ghostedit.dom.getParentGhostBlock(tracker)) === true) {
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker))) {
 				direction = "top";
 			}
 			
@@ -1274,10 +1274,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		while(true) {
 			
-			if ((target = ghostedit.dom.getNextSiblingGhostBlock(tracker)) === true) {
+			if ((target = ghostedit.dom.getNextSiblingGhostBlock(tracker))) {
 				direction = "behind";
 			}
-			else if ((target = ghostedit.dom.getParentGhostBlock(tracker)) === true) {
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker))) {
 				direction = "bottom";
 			}
 			

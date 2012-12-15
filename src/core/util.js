@@ -155,13 +155,13 @@
 			xhr.onreadystatechange = function () {
 				var responseData;
 				if(xhr.readyState === 4) {
-					if(xhr.status === "200") {
+					if(xhr.status === 200) {
 						responseData = (dataType === "xml") ? xhr.responseXML : xhr.responseText;
-						if(sHandle !== null){ sHandle(true, responseData); }
+						if (sHandle !== null){ sHandle(true, responseData); }
 						return true;
 					}
 					else{
-						if(sHandle !== null){ sHandle(false, responseData); }
+						if (sHandle !== null){ sHandle(false, responseData); }
 						return false;
 					}
 				}
