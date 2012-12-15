@@ -1,6 +1,7 @@
 (function (window, undefined) {
 
-	var _plugins = {};
+	var _plugins = {},
+	ghostedit = window.ghostedit;
 	
 	_plugins.register = function(name, object) {
 		if (ghostedit.plugins[name]) return false;
@@ -8,7 +9,7 @@
 		ghostedit.plugins[name] = object;
 		
 		return true;
-	},
+	};
 	
 	_plugins.enable = function (name) {
 		if (!ghostedit.plugins[name]) return false;
@@ -19,7 +20,7 @@
 			plugin.enable();
 		}
 		ghostedit.enabledplugins[name] = true;
-	},
+	};
 	
 	_plugins.disable = function (name) {
 		if (!ghostedit.enabledplugins[name] || !ghostedit.plugins[name]) return false;
@@ -29,7 +30,7 @@
 			plugin.disable();
 		}
 		ghostedit.enabledplugins[name] = false;
-	}
+	};
 	
 	window.ghostedit.api.plugin = _plugins;
 })(window);

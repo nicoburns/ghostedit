@@ -1,14 +1,15 @@
 (function (window, undefined) {
-	_container = {};
 	
-	/*_container.enable = function () {
-		//This causes nested containers, and isn't needed
-		//ghostedit.inout.registerimporthandler (_container.inout.importHTML, "div");
+	var _container = {},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
+	
+	_container.enable = function () {
 		return true;
-	}*/
+	};
 	
 	_container.ghostevent = function (type, block, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false;
+		var docall = false, blocktype, eventhandled = false, childblocks, i;
 		switch (type) {
 			case "deletebehind":
 				childblocks = block.childNodes;
@@ -26,11 +27,7 @@
 						}
 					}
 				}
-				
-				if (!eventhandled) {
-					// No child elements behind element that accepted delete
-					// Do nothing because container doesn't allow deletes behind it
-				}
+				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes behind it*/
 			break;
 			case "deleteahead":
 				childblocks = block.childNodes;
@@ -48,15 +45,10 @@
 						}
 					}
 				}
-				
-				if (!eventhandled) {
-					// No child elements behind element that accepted delete
-					// Do nothing because container doesn't allow deletes behind it
-				}
+				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes ahead of it*/
 			break;
 		}		
-		
-	}
+	};
 	
 	_container.dom = {
 	
@@ -66,7 +58,7 @@
 				target.insertBefore(newElem, anchorelem);
 			}
 			else {
-				if (anchorelem.nextSibling != null) {
+				if (anchorelem.nextSibling !== null) {
 					target.insertBefore(newElem, anchorelem.nextSibling);
 				}
 				else {
@@ -84,13 +76,13 @@
 			
 			return true;
 		}
-	}
+	};
 		
 	_container.selection = {
 		deleteContents: function (container, collapse) {
-			var i, startelem, endelem, startblock, endblock, startcblock, endcblock, childblocks, sametagtype, savedcontent, range, savedrange, dodelete, r1, r2, b1, b2, firsttextblocktype, dummynode, insertId, insertedelem;
-			
-			var startofblock, endofblock, selrange, atverystart = false, atveryend = false, firstchildblock, lastchildblock, condition, childblocktype, status, message, handler, block;
+			var i, 
+			firstchildblock, lastchildblock, startofblock, endofblock, atverystart = false, atveryend = false,
+			startblock, endblock, cblock, startcblock, endcblock, childblocks, dodelete, selrange, handler;
 			
 			// Temporary selection range to avoid changing actual saved range
 			if(ghostedit.selection.saved.type !== "textblock") return false;
@@ -199,11 +191,11 @@
 
 			return true;
 		}
-	}
+	};
 	
 	_container.inout = {
 		importHTML: function (sourcenode) {
-			var container, handler, result, i, elemcount;
+			var container, result, i, elemcount, elem, tagname;
 			if (!sourcenode || sourcenode.childNodes.length < 1) return false;
 			
 			container = _container.create();
@@ -244,9 +236,9 @@
 			return container;
 		},
 		
-		exportHTML: function (target, includeself) { // Shouldn't be used without first using export prepare functions
+		exportHTML: function (target/*, includeself*/) { // Shouldn't be used without first using export prepare functions
 			if (!target || !ghostedit.dom.isGhostBlock(target) || target.getAttribute("data-ghostedit-elemtype") !== "container") return false;
-			var i = 0, elem, code, finalCode = "", params, handleResult, blockcount = 0, snippet, handler, isrootnode = false;
+			var i = 0, elem, blockreturn, finalCode = "", blockcount = 0, snippet, handler;
 			
 			//if (target.getAttribute("data-ghostedit-isrootnode") === true) isrootnode = true;
 			
@@ -264,7 +256,7 @@
 				
 				if (blockreturn) {
 					finalCode += blockreturn.content;
-					blockcount ++;
+					blockcount++;
 				}
 				
 				//Create snippet from first 3 paragraphs
@@ -275,7 +267,7 @@
 			
 			return {content: finalCode, snippet: snippet};
 		}
-	}
+	};
 	
 	_container.paste = {
 		handle: function (target, source, position) {
@@ -321,12 +313,13 @@
 			return true;
 			
 		}
-	}
+	};
 	
+	// TODO remove this function is favour of dom.isChildGhostBlock
 	_container.isChildGhostBlock = function (elem, childblocks) {
-		//alert(arguments.length);
+		var i;
 		if (!elem) return false;
-		if (elem.nodeType != 1) return false;
+		if (elem.nodeType !== 1) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
@@ -336,9 +329,10 @@
 			}
 		}
 		return false;
-	}
+	};
 	
 	_container.create = function () {
+		var newElem;
 		// Create element, and assign id and content
 		newElem = document.createElement("div");
 		ghostedit.blockElemId += 1;
@@ -350,7 +344,7 @@
 		newElem.setAttribute("data-ghostedit-handler", "container");
 		
 		return newElem;
-	}
+	};
 	
 	_container.focus = function (target) {
 		var firstchild, handler;
@@ -364,7 +358,7 @@
 		ghostedit.plugins[handler].focus(firstchild);
 		
 		return true;
-	}
+	};
 	
 	ghostedit.api.plugin.register("container", _container);
 })(window);

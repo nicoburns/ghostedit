@@ -3,60 +3,63 @@
 	var _link = {
 		focusedlink: false,
 		el: {}
-	};
+	},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
 	
 	
 	_link.enable = function () {
 		// Register event listeners
-		ghostedit.event.addListener ("preundo", function () { _link.unfocus() });
-		ghostedit.event.addListener ("preredo", function () { _link.unfocus() });
+		ghostedit.event.addListener ("preundo", function () { _link.unfocus(); });
+		ghostedit.event.addListener ("preredo", function () { _link.unfocus(); });
 		//ghostedit.event.addListener ("export:before", function () { _link.unfocus() });
 		
-		ghostedit.event.addListener("import:after", function () { _link.event.postimport() });
-		ghostedit.event.addListener("ui:update", function () { _link.ui.update() })
+		ghostedit.event.addListener("import:after", function () { _link.event.postimport(); });
+		ghostedit.event.addListener("ui:update", function () { _link.ui.update(); });
 		
 		// Register link import capabilities for the textblock module
 		ghostedit.inout.registerimporthandler (ghostedit.plugins.textblock.inout.importHTML, "a");
-		ghostedit.plugins.textblock.inout.parserules.tags["a"] = { "attributes": [ "href" ] };//, {name: "data-ghostedit-elemtype", value: "link"}, {name: "data-ghostedit-handler", value: "link"} ] };
+		ghostedit.plugins.textblock.inout.parserules.tags.a = { "attributes": [ "href" ] };//, {name: "data-ghostedit-elemtype", value: "link"}, {name: "data-ghostedit-handler", value: "link"} ] };
 		
 		// Register api functions
 		ghostedit.api.link = ghostedit.api.link || {};
 		
 		ghostedit.api.link.create = function () {
 			return _link.create();
-		}
+		};
 		
 		ghostedit.api.link.updateurl = function (url) {
 			return _link.updateurl(url);
-		}
+		};
 		
 		ghostedit.api.link.open = function () {
 			return _link.open();
-		}
+		};
 	};
 	
-	_link.ghostevent = function (event, target, source, params) {
+	_link.ghostevent = function (/*event, target, source, params*/) {
 		return false;
 	};
 		
 	_link.event = {
 		urlBoxKeypress: function (e) {
-			e = window.event != null ? window.event : e;
-			var keycode = e.keyCode != null ? e.keyCode : e.charCode;
+			e = (window.event !== null) ? window.event : e;
+			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 			
-			switch(keycode) {
-			case 13:
+			// If enter key is pressed
+			if (keycode === 13) {
 				_link.create();
 				ghostedit.ui.modal.hide();
 				return false;
-			break;
 			}
 			return true;
 		},
 		
 		postimport: function (params) {
+			var i, aelems;
 			if (!params || !params.editdiv) return false;
-			var aelems = params.editdiv.getElementsByTagName("a");
+			
+			aelems = params.editdiv.getElementsByTagName("a");
 			for (i = 0; i < aelems.length; i += 1) {
 				aelems[i].setAttribute("data-ghostedit-elemtype","link");
 				aelems[i].setAttribute("data-ghostedit-handler","link");
@@ -65,7 +68,7 @@
 		},
 		
 		insertButtonClick: function () {
-			//ghostedit.selection.save();
+			var range;
 			if (ghostedit.selection.savedRange.isCollapsed()) {
 				range = ghostedit.selection.savedRange.clone();
 				/*if (!document.createRange && document.selection) {
@@ -88,12 +91,12 @@
 				document.getElementById('ghostedit_urlinput').focus();*/
 				
 				//TODO standards based link insert
-				if (document.createRange) {
+				/*if (document.createRange) {
 					//Create <a> element, range.insertNode()
 				}
-				else if (document.selection) {
+				else */if (document.selection) {
 					//TODO selection is never collapsed
-					ghostedit.selection.savedRange.getNative().pasteHTML("<a id='ghostedit_newlink' href='http://'>Link Text</a>")
+					ghostedit.selection.savedRange.getNative().pasteHTML("<a id='ghostedit_newlink' href='http://'>Link Text</a>");
 					lasso().selectNodeContents("ghostedit_newlink").select();
 					document.getElementById("ghostedit_newlink").id = "";
 				}
@@ -135,7 +138,7 @@
 			}
 			
 			if (aelem) {
-				if (aelem != _link.focusedlink) {
+				if (aelem !== _link.focusedlink) {
 					_link.focus(aelem);
 				}
 			}
@@ -180,7 +183,7 @@
 			linkbox.onclick = function (event) { return ghostedit.util.cancelEvent(event); };
 			linkbox.ondblclick = function (event) { return ghostedit.util.cancelEvent(event); };
 			linkbox.onresizestart = function (event) { return ghostedit.util.cancelEvent(event); };
-			linkbox.oncontrolselect = function(event){return ghostedit.util.cancelAllEvents(event)};
+			linkbox.oncontrolselect = function(event){return ghostedit.util.cancelAllEvents(event); };
 			
 			// Add event to remove the focused link to the clickable link element
 			ghostedit.util.addEvent(linkboxa, "click", ghostedit.util.preparefunction(_link.remove, null, link));
@@ -201,20 +204,11 @@
 	
 	_link.create = function (url) {
 		ghostedit.history.saveUndoState();
-		var urlinput, textinput, aelems, i;
+		var i, aelems;
 
-		if (typeof url == "undefined") {
-			/*urlinput = document.getElementById("ghostedit_urlinput");
-			textinput = document.getElementById("ghostedit_linktextinput");
-			urlinput.blur();
-			ghostedit.selection.savedRange.select();//.pasteText(textinput.value, false);
-			document.execCommand("CreateLink", false, urlinput.value);*/
-			url = "http://";
-		} 
-		//else {
-			document.execCommand("CreateLink", false, url);
-		//}
-		
+		if (typeof url === "undefined") url = "http://";
+		document.execCommand("CreateLink", false, url);
+
 		aelems = ghostedit.editdiv.getElementsByTagName("a");
 		for (i = 0; i < aelems.length; i += 1) {
 			aelems[i].setAttribute("data-ghostedit-elemtype","link");
@@ -226,8 +220,6 @@
 	};
 	
 	_link.focus = function (link) {
-		var linkbox, linkIdNum, left, linkbounds, linkboxa;
-		
 		// Set focusedlink variable to the link
 		_link.focusedlink = link;
 		
@@ -245,8 +237,9 @@
 	};
 	
 	_link.remove = function (link) {
-		var range, linkcontent;
+		var linkcontent;
 		link = link || _link.focusedlink;
+		
 		if(!ghostedit.dom.isGhostBlock(link) || link.tagName.toLowerCase() !== "a") return false;
 		if (ghostedit.selection.saved.type !== "textblock") return false;
 		
@@ -265,7 +258,7 @@
 	};
 	
 	_link.updateurl = function (newurl) {
-		if (_link.focusedlink != false && _link.focusedlink.href != newurl) {
+		if (_link.focusedlink !== false && _link.focusedlink.href !== newurl) {
 			_link.focusedlink.href = newurl;
 			_link.focusedlink.title = newurl;
 			ghostedit.event.trigger("ui:message", {message:"URL updated to '" + newurl + "'", time: 2, color: "success"});
@@ -273,7 +266,7 @@
 	};
 	
 	_link.open = function () {
-		if (_link.focusedlink != false) {
+		if (_link.focusedlink !== false) {
 			window.open(_link.focusedlink.href);
 		}
 	};

@@ -4,7 +4,8 @@
 		savename: "",
 		saveurl: "",
 		params: []
-	};
+	},
+	ghostedit = window.ghostedit;
 	
 	_save.enable = function () {
 		var i, params, param;

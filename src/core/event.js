@@ -4,15 +4,16 @@
 		listeners: [],
 		listenerid: 0,
 		eventtypes: [],
-		cancelKeypress: false, //allows onkeypress event to be cancelled from onkeydown event.
-	};
+		cancelKeypress: false //allows onkeypress event to be cancelled from onkeydown event.
+	},
+	ghostedit = window.ghostedit;
 		
 	_event.keydown = function (elem,e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
 		var keycode, ghostblock, handler, handled;
 		ghostedit.selection.save(false);
 		
-		e = !(e && e.istest) && window.event != null ? window.event : e;
-		keycode = e.keyCode != null ? e.keyCode : e.charCode;
+		e = !(e && e.istest) && window.event !== null ? window.event : e;
+		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 		
 		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
 		
@@ -20,7 +21,7 @@
 		switch(keycode) {
 			case 8: //backspace
 			case 46: // delete key
-				cancelKeypress = false;
+				_event.cancelKeypress = false;
 				if(ghostedit.selection.savedRange.isCollapsed() === false) {
 					ghostedit.history.saveUndoState();
 					
@@ -92,8 +93,8 @@
 		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
 		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
 		
-		e = !(e && e.istest) && window.event != null ? window.event : e;
-		keycode = e.keyCode != null ? e.keyCode : e.charCode;
+		e = !(e && e.istest) && window.event !== null ? window.event : e;
+		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 		
 		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
 		
@@ -105,7 +106,7 @@
 		// Global keyevents
 		switch(keycode) {
 			case 8: //cancel backspace event in opera if cancelKeypress = true
-				if (_event.cancelKeypress == true) {
+				if (_event.cancelKeypress === true) {
 					_event.cancelKeypress = false;
 					return ghostedit.util.cancelEvent ( e );
 				}
@@ -136,7 +137,7 @@
 		
 		// Check if array for that event needs to be created
 		listeners = _event.listeners;
-		if (!listeners[event] || !typeof(listeners[event]) === "object" || !(listeners[event] instanceof Array)) {
+		if (!listeners[event] || typeof(listeners[event]) !== "object" || !(listeners[event] instanceof Array)) {
 			listeners[event] = [];
 		}
 		
@@ -192,11 +193,11 @@
 	_event.trigger = function (event, params) {
 		var listeners = _event.listeners, i;
 		if (params === undefined) params = {};
-		if (!listeners[event] || !typeof(listeners[event]) === "object" || !(listeners[event] instanceof Array)) return;
+		if (!listeners[event] || typeof(listeners[event]) !== "object" || !(listeners[event] instanceof Array)) return;
 		
 		if (ghostedit.debug) {
-			console.log(event);
-			console.log(params);
+			window.console.log(event);
+			window.console.log(params);
 		}
 		
 		for (i = 0; i < listeners[event].length; i++) {
@@ -205,7 +206,7 @@
 	};
 
 	_event.sendBackwards = function (eventtype, source, params) {
-		var target = false, tracker, handler, handled = false, result;
+		var target = false, tracker, result, direction;
 		if (!params) params = {};
 		if (!ghostedit.dom.isGhostBlock(source)) return false;
 		
@@ -213,20 +214,14 @@
 		
 		while(true) {
 			
-			if (target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker)) {
+			if ((target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker)) === true) {
 				direction = "ahead";
 			}
-			else if (target = ghostedit.dom.getParentGhostBlock(tracker)) {
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker)) === true) {
 				direction = "top";
 			}
 			
-			//alert("source - " + source.id + "\ntarget - " + target.id);
-			
 			result = _event.send (eventtype, target, direction, params);
-			
-			//if (result) alert("source - " + source.id + "\ntarget - " + target.id + "\nresult - " + result.handled);
-			//else alert("source - " + source.id + "\ntarget - " + target.id + "\nresult - false");
-			
 			if (!result) return false;
 			else if (result.handled === true) return true;
 			
@@ -235,7 +230,7 @@
 	};
 
 	_event.sendForwards = function (eventtype, source, params) {
-		var target = false, tracker, handler, handled = false, result, direction;
+		var target = false, tracker, result, direction;
 		if (!params) params = {};
 		if (!ghostedit.dom.isGhostBlock(source)) return false;
 		
@@ -243,14 +238,15 @@
 		
 		while(true) {
 			
-			if (target = ghostedit.dom.getNextSiblingGhostBlock(tracker)) {
+			if ((target = ghostedit.dom.getNextSiblingGhostBlock(tracker)) === true) {
 				direction = "behind";
 			}
-			else if (target = ghostedit.dom.getParentGhostBlock(tracker)) {
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker)) === true) {
 				direction = "bottom";
 			}
 			
-			if ( !(result = _event.send (eventtype, target, direction, params)) ) return false;
+			result = _event.send (eventtype, target, direction, params);
+			if (!result) return false;
 			else if (result.handled === true) return true;
 			
 			tracker = target;

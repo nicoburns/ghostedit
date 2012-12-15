@@ -1,7 +1,9 @@
 (function(window, undefined) {
 	window.ghostedit.init = function (placediv, options) {
 		if (typeof placediv === "string") placediv = document.getElementById(placediv);
-		var wrapdiv, workspace, uilayer, statusbar, elems, i, j, brNode, oldDocRoot, isImg, img, insertedelem, lastelem = false, htmlelem, plugin, handler;
+		var i, handler,
+		ghostedit = window.ghostedit, 
+		wrapdiv, workspace, uilayer, htmlelem;
 		
 		// Set up user options
 		ghostedit.options = {};
@@ -18,7 +20,6 @@
 		
 		//Hide div containing original content
 		placediv.style.display = 'none';
-		//placediv.parentNode.removeChild(placediv);
 		ghostedit.sourceelem = placediv;
 		
 		// Create wrapper div that all other GhostEdit elements go in
@@ -71,8 +72,8 @@
 		ghostedit.plugins[handler].focus(ghostedit.editdiv);
 		
 		// Make sure that FF uses tags not CSS, and doesn't show resize handles on images
-		try{document.execCommand("styleWithCSS", false, false);} catch(err){};//makes FF use tags for contenteditable
-		try{document.execCommand("enableObjectResizing", false, false);} catch(err){};//stops resize handles being resizeable in FF
+		try{document.execCommand("styleWithCSS", false, false);} catch(err){}//makes FF use tags for contenteditable
+		try{document.execCommand("enableObjectResizing", false, false);} catch(err){}//stops resize handles being resizeable in FF
 		
 		// Save selection & setup undo
 		ghostedit.selection.save();
@@ -88,7 +89,7 @@
 		ghostedit.util.addEvent(htmlelem, "drop", ghostedit.util.cancelEvent);
 		
 		// Attach handlers to wrapdiv
-		ghostedit.util.addEvent(wrapdiv, "click", function( e ) { ghostedit.util.preventBubble(e) } );
+		ghostedit.util.addEvent(wrapdiv, "click", function( e ) { ghostedit.util.preventBubble(e); } );
 		//ghostedit.util.addEvent(wrapdiv, "mouseup", function( e ) { ghostedit.util.preventBubble(e) } );
 		//ghostedit.util.addEvent(wrapdiv, "mousedown", function( e ) { ghostedit.util.preventBubble(e) } );
 		
@@ -96,8 +97,8 @@
 		ghostedit.util.addEvent(ghostedit.editdiv, "click", ghostedit.selection.save);
 		ghostedit.util.addEvent(ghostedit.editdiv, "mouseup", ghostedit.selection.save);
 		ghostedit.util.addEvent(ghostedit.editdiv, "keyup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keydown", function(event) {ghostedit.event.keydown(this, event)});
-		ghostedit.util.addEvent(ghostedit.editdiv, "keypress", function(event) {ghostedit.event.keypress(this, event)});
+		ghostedit.util.addEvent(ghostedit.editdiv, "keydown", function(event) {ghostedit.event.keydown(this, event); });
+		ghostedit.util.addEvent(ghostedit.editdiv, "keypress", function(event) {ghostedit.event.keypress(this, event); });
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragenter", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
@@ -113,20 +114,5 @@
 		ghostedit.plugins.container.focus(ghostedit.editdiv);
 		
 		ghostedit.event.trigger("init:after");
-	};
-	
-	var finish = function () {
-		if(ghostedit.active) {
-			ghostedit.active = false;
-			ghostedit.sourceelem.innerHTML = ghostedit.inout.exportHTML().full;
-			ghostedit.wrapdiv.parentNode.removeChild(ghostedit.wrapdiv);
-			ghostedit.selection.savedRange = null;
-			ghostedit.selection.saved = {type: "none", data : null};
-			ghostedit.image.focusedimage = null;
-			ghostedit.blockElemId = 0;
-			ghostedit.imgElemId = 0;
-			ghostedit.sourceelem.style.display = 'block';
-			if(ghostedit.options.resetcallback) ghostedit.options.resetcallback();
-		}
 	};
 })(window);

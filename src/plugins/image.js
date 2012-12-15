@@ -6,16 +6,17 @@
 		originalMouseX: null, originalMouseY: null, //Image resize variables
 		buttons: [],
 		el: {}
-	};
+	},
+	ghostedit = window.ghostedit;
 	
 	_image.enable = function () {
 		// Register event listeners
-		ghostedit.event.addListener ("preundo", function () { _image.unfocus() });
-		ghostedit.event.addListener ("preredo", function () { _image.unfocus() });
-		//ghostedit.event.addListener ("export:before", function () { _image.unfocus() });
+		ghostedit.event.addListener ("preundo", function () { _image.unfocus(); });
+		ghostedit.event.addListener ("preredo", function () { _image.unfocus(); });
+		//ghostedit.event.addListener ("export:before", function () { _image.unfocus(); });
 		
-		ghostedit.event.addListener ("postundo", function () { _image.applyeventlisteners() });
-		ghostedit.event.addListener ("postredo", function () { _image.applyeventlisteners() });
+		ghostedit.event.addListener ("postundo", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("postredo", function () { _image.applyeventlisteners(); });
 		
 		ghostedit.event.addListener ("selection:change", function () {
 			if (ghostedit.selection.saved.type !== "image") {
@@ -63,13 +64,13 @@
 		
 		ghostedit.api.image.updatealttext = function (value) {
 			return _image.updatealttext(value);
-		}
+		};
 	};
 	
 	_image.event = {
 		keydown: function (e) {
-			e = window.event != null ? window.event : e;
-			var keycode = e.keyCode != null ? e.keyCode : e.charCode;
+			e = (window.event) !== null ? window.event : e;
+			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 			
 			switch(keycode) {
 				case 8:
@@ -104,7 +105,7 @@
 		
 		insertButtonClick: function () {
 			ghostedit.selection.save();
-			var i, that = [], elem, images, modalcontent;
+			var i, elem, images, modalcontent, insert;
 			modalcontent = "<h2>Insert image</h2><form>" +
 			"<p>This dialog allows you to choose an image to insert into the document. Either select one from the list of uploaded images, or enter a custom url in the box below.</p>" +
 			"<hr />" +
@@ -133,15 +134,17 @@
 			
 			ghostedit.ui.modal.show(modalcontent);
 			
+			insert = function () {
+				_image.newImageBefore(null, this.getAttribute("ghostedit-listitem-value"), false);
+				ghostedit.ui.modal.hide();
+			};
+			
 			for(i = 0; i < images.length; i += 1) {
 				elem = document.createElement("div");
 				elem.className = "ghostedit-listbox-item";
 				elem.setAttribute("ghostedit-listitem-value", images[i].url);
 				elem.innerHTML = "<img src='" + images[i].thumburl + "' style='height: 60px; float: left' /><p style='margin-left: 100px;font-size: 21px'>" + images[i].name + "</p>";
-				elem.onclick = function () {
-					_image.newImageBefore(null, this.getAttribute("ghostedit-listitem-value"), false);
-					ghostedit.ui.modal.hide();
-				}
+				elem.onclick = insert;
 				document.getElementById("ghostedit_listbox").appendChild(elem);
 			}
 			
@@ -152,7 +155,7 @@
 	_image.selection = {
 		compare: function (image1, image2) {
 			if (!image1 || !image2) return false;
-			return !!(image1 === image2);
+			return (image1 === image2) ? true : false;
 		},
 		
 		restore: function (image) {
@@ -161,11 +164,11 @@
 			return true;
 		},
 		
-		deleteContents: function(image) {
-			//Do nothing (images shouldn't be deleted via selection)
+		deleteContents: function() {
+			//Do nothing (images shouldn't be deleted via selection if only partially selected)
 			return true;
 		}
-	}
+	};
 	
 		_image.inout = {
 		importHTML: function(source) {
@@ -204,7 +207,7 @@
 			newimg.style.cssFloat = source.style.cssFloat;
 			newimg.style.styleFloat = source.style.styleFloat;
 			newimg.style.clear = source.style.clear;
-			if (source.style.cssFloat == "right" || source.style.styleFloat == "right") {
+			if (source.style.cssFloat === "right" || source.style.styleFloat === "right") {
 				newimg.style.marginLeft = "20px";
 				newimg.style.marginRight = "0px";
 			}
@@ -228,13 +231,13 @@
 			if(!ghostedit.options.image.flexibleimages) {
 				finalCode += "width:" + elem.offsetWidth.toString() + "px;height; " + elem.offsetHeight + "px;";
 			}
-			if (elem.style.styleFloat == "left" || elem.style.cssFloat == "left") {
+			if (elem.style.styleFloat === "left" || elem.style.cssFloat === "left") {
 				finalCode += "float:left;clear:left;margin-right: 20px;";
 			}
 			else {
 				finalCode += "float:right;clear:right;margin-left: 20px;";
 			}
-			if (elem.style.clear != "") finalCode += "clear:" + elem.style.clear;
+			if (elem.style.clear !== "") finalCode += "clear:" + elem.style.clear;
 			finalCode += "'";
 			if (elem.className.length > 0 && !/ghostedit/.test(elem.className)) finalCode += " class='" + elem.className + "'";
 			finalCode += " />";
@@ -243,12 +246,8 @@
 		}
 	};
 	
-	_image.ghostevent = function (eventtype, target, sourcedirection, params) {
-		switch (eventtype) {
-			case "delete":
-				return false; // Don't handle (= passthrough)
-			break;
-		}
+	_image.ghostevent = function (eventtype/*, target, sourcedirection, params*/) {
+		if (eventtype === "delete") return false;// Don't handle (= passthrough)
 	};
 	
 	_image.move = {
@@ -272,21 +271,24 @@
 		},
 		
 		up: function (e) {
-			var i, img, editdiv, textblockelems, thisone, storedimg, offsetTopBefore, offsetLeftBefore, parent, handler;
+			var img, offsetTopBefore, offsetLeftBefore, parent, handler, anchor;
+			
 			ghostedit.history.saveUndoState();
-			if (_image.focusedimage != null) {
+			
+			if (_image.focusedimage !== null) {
 				img = _image.focusedimage;
 				offsetLeftBefore = img.offsetLeft;
 				offsetTopBefore = img.offetTop;
 				
-				if (anchor = ghostedit.dom.getPreviousSiblingGhostBlock(img)) {
+				anchor = ghostedit.dom.getPreviousSiblingGhostBlock(img);
+				if (anchor) {
 					parent = ghostedit.dom.getParentGhostBlock(anchor);
 					handler = parent.getAttribute("data-ghostedit-handler");
 					ghostedit.plugins[handler].dom.addchild(parent, "before", anchor, img);
 				}				
 				
 				// If the image is still in the same position, then remove it's clear style
-				if(offsetLeftBefore == img.offsetLeft && img.offsetTopBefore == img.offsetTop) {
+				if(offsetLeftBefore === img.offsetLeft && img.offsetTopBefore === img.offsetTop) {
 					img.style.clear = "";
 				}
 				else {
@@ -299,21 +301,24 @@
 		},
 		
 		down: function (e) {
-			var i, img, editdiv, textblockelems, thisone, nextone, elem = false, storedimg, parent, handler;
+			var img, parent, handler, offsetLeftBefore, offsetTopBefore, anchor;
+			
 			ghostedit.history.saveUndoState();
-			if (_image.focusedimage != null) {
+			
+			if (_image.focusedimage !== null) {
 				img = _image.focusedimage;
 				offsetLeftBefore = img.offsetLeft;
 				offsetTopBefore = img.offetTop;
 				
-				if (anchor = ghostedit.dom.getNextSiblingGhostBlock(img)) {
+				anchor = ghostedit.dom.getNextSiblingGhostBlock(img);
+				if (anchor) {
 					parent = ghostedit.dom.getParentGhostBlock(anchor);
 					handler = parent.getAttribute("data-ghostedit-handler");
 					ghostedit.plugins[handler].dom.addchild(parent, "after", anchor, img);
 				}				
 				
 				// If the image is still in the same position, then remove it's clear style
-				if(offsetLeftBefore == img.offsetLeft && img.offsetTopBefore == img.offsetTop) {
+				if(offsetLeftBefore === img.offsetLeft && img.offsetTopBefore === img.offsetTop) {
 					img.style.clear = "";
 				}
 				else {
@@ -338,10 +343,10 @@
 		if (startpara && endpara) {
 			elem = startpara;
 			do {
-				if (elem.getAttribute("data-ghostedit-elemtype").toLowerCase() == "textblock") {
+				if (elem.getAttribute("data-ghostedit-elemtype").toLowerCase() === "textblock") {
 					startpara.style.clear = clearval;
 				}
-				if (elem.nextSibling && elem.id != endpara.id) {
+				if (elem.nextSibling && elem.id !== endpara.id) {
 					elem = elem.nextSibling;
 				}
 				else {
@@ -353,7 +358,7 @@
 		
 		// Loop through images attached to startpara
 		elem = startpara;
-		while (elem.previousSibling && elem.previousSibling.getAttribute("data-ghostedit-elemtype") == "image") {
+		while (elem.previousSibling && elem.previousSibling.getAttribute("data-ghostedit-elemtype") === "image") {
 			elem = elem.previousSibling;
 			elem.style.clear = clearval;
 		}
@@ -366,7 +371,7 @@
 	
 	_image.remove = function (e) {
 		ghostedit.history.saveUndoState();
-		if (_image.focusedimage != null) {
+		if (_image.focusedimage !== null) {
 			var imgToDel = _image.focusedimage;
 			_image.unfocus();
 			if (imgToDel.parentNode) {
@@ -376,7 +381,7 @@
 		if (e && e.preventDefault) {
 			e.stopPropagation();//stops parent elements getting a click event (standards)
 		}
-		else if (window.event.cancelBubble != null) {
+		else if (window.event.cancelBubble !== null) {
 			window.event.cancelBubble = true; //stops parent elements getting a click event (IE)
 		}
 		ghostedit.history.saveUndoState();
@@ -402,7 +407,7 @@
 	};
 	
 	_image.updatealttext = function (newalt) {
-		if (_image.focusedimage != false && _image.focusedimage.alt != newalt) {
+		if (_image.focusedimage !== false && _image.focusedimage.alt !== newalt) {
 			_image.focusedimage.alt = newalt;
 			_image.focusedimage.title = newalt;
 			ghostedit.event.trigger("ui:message", {message: "Image description updated to '" + newalt + "'", time: 2, color: "success"});
@@ -412,7 +417,8 @@
 	
 	
 	_image.focus = function (img, e) {
-		var existHandle, resizeHandle, border, b, html, imgIdNum, imgToolbar;
+		var i, existHandle, resizeHandle, border, b, html, imgIdNum;
+		
 		_image.unfocus();
 		if (ghostedit.isEditing === true && _image.focusedimage === null) {
 			
@@ -429,7 +435,8 @@
 			ghostedit.contextuallayer.appendChild(border);
 
 			// Remove existing resize handle
-			if (existHandle = document.getElementById("ghostedit_image_resizehandle_" + imgIdNum)) {
+			existHandle = document.getElementById("ghostedit_image_resizehandle_" + imgIdNum);
+			if (existHandle) {
 				ghostedit.contextuallayer.removeChild(existHandle);
 			}
 			
@@ -439,7 +446,7 @@
 				resizeHandle.className = "ghostedit_image_resizehandle";
 				resizeHandle.id = "ghostedit_image_resizehandle_" + imgIdNum;
 				resizeHandle.style.top = (img.offsetTop + img.offsetHeight - 13) + "px";
-				if (img.style.cssFloat == "left" || img.style.styleFloat == "left") {
+				if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
 						resizeHandle.style.left = (img.offsetLeft + img.offsetWidth - 13) + "px";
 						resizeHandle.style.cursor = "se-resize";
 						resizeHandle.style.background = "URL(" + ghostedit.options.imageurl + "/image/resize-se.png)";
@@ -466,7 +473,7 @@
 			//Align button
 			b = _image.ui.createbutton(imgIdNum, "align", ">", function (img, button) {
 				button.elem.style.top = (img.offsetTop + (img.offsetHeight/2) - 15) + "px";
-				if (img.style.cssFloat == "left" || img.style.styleFloat == "left") {
+				if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
 					button.elem.style.left = (img.offsetLeft + img.offsetWidth - 15) + "px";
 					button.elem.innerHTML = "&gt;";
 				}
@@ -475,7 +482,7 @@
 					button.elem.innerHTML = "&lt;";
 				}
 			});
-			if (img.style.cssFloat == "left" || img.style.styleFloat == "left") {
+			if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
 				b.event.click = function(event){return _image.move.align("right", event);};
 			}
 			else {
@@ -496,7 +503,7 @@
 				//button.elem.style.top = (img.offsetTop - 15) + "px";
 				//button.elem.style.left = (img.offsetLeft + (img.offsetWidth/2) - 15) + "px";
 				button.elem.style.top = (img.offsetTop + (img.offsetHeight/2) - 15 - 40) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft + img.offsetWidth - 15 : img.offsetLeft - 15) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft + img.offsetWidth - 15 : img.offsetLeft - 15) + "px";
 			});
 			b.event.click = function(event){return _image.move.up(event);};
 			//b.register();
@@ -506,7 +513,7 @@
 				//button.elem.style.top = (img.offsetTop + img.offsetHeight - 15) + "px";
 				//button.elem.style.left = (img.offsetLeft + (img.offsetWidth/2) - 15) + "px";
 				button.elem.style.top = (img.offsetTop + (img.offsetHeight/2) - 15 + 40) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft + img.offsetWidth - 15 : img.offsetLeft - 15) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft + img.offsetWidth - 15 : img.offsetLeft - 15) + "px";
 			});
 			b.event.click = function(event){return _image.move.down(event);};
 			//b.register();
@@ -514,7 +521,7 @@
 			//Small size button
 			b = _image.ui.createbutton(imgIdNum, "small", "Small", function (img, button) {
 				button.elem.style.top = (img.offsetTop + 40) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 60) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 60) + "px";
 				button.elem.style.width = '60px';
 			});
 			b.event.click = function(event){
@@ -532,7 +539,7 @@
 			//Golden size button
 			b = _image.ui.createbutton(imgIdNum, "golden", "Golden", function (img, button) {
 				button.elem.style.top = (img.offsetTop + 80) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 80) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 80) + "px";
 				button.elem.style.width = '80px';
 			});
 			b.event.click = function(event){
@@ -550,7 +557,7 @@
 			//Medium size button
 			b = _image.ui.createbutton(imgIdNum, "medium", "Medium", function (img, button) {
 				button.elem.style.top = (img.offsetTop + 120) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 80) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 80) + "px";
 				button.elem.style.width = '80px';
 			});
 			b.event.click = function(event){
@@ -568,7 +575,7 @@
 			//Fullwidth size button
 			b = _image.ui.createbutton(imgIdNum, "fullwidth", "Full Width", function (img, button) {
 				button.elem.style.top = (img.offsetTop + 160) + "px";
-				button.elem.style.left = (img.style.cssFloat == "left" || img.style.styleFloat == "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 100) + "px";
+				button.elem.style.left = (img.style.cssFloat === "left" || img.style.styleFloat === "left" ? img.offsetLeft : img.offsetLeft + img.offsetWidth - 100) + "px";
 				button.elem.style.width = '100px';
 			});
 			b.event.click = function(event){
@@ -585,10 +592,10 @@
 			
 			//Clear button
 			html = "<select onclick='ghostedit.util.preventBubble()' onchange='_image.focusedimage.style.clear = this.value;_image.refocus();'>";
-			html += "<option value='' " + (img.style.clear == '' ? "selected='selected' " : "") + ">Clear: none</option>";
-			html += "<option value='left' " + (img.style.clear == 'left' ? "selected='selected' " : "") + ">Clear: left</option>";
-			html += "<option value='right' " + (img.style.clear == 'right' ? "selected='selected' " : "") + ">Clear: right</option>";
-			html += "<option value='both' " + (img.style.clear == 'both' ? "selected='selected' " : "") + ">Clear: both</option>";
+			html += "<option value='' " + (img.style.clear === '' ? "selected='selected' " : "") + ">Clear: none</option>";
+			html += "<option value='left' " + (img.style.clear === 'left' ? "selected='selected' " : "") + ">Clear: left</option>";
+			html += "<option value='right' " + (img.style.clear === 'right' ? "selected='selected' " : "") + ">Clear: right</option>";
+			html += "<option value='both' " + (img.style.clear === 'both' ? "selected='selected' " : "") + ">Clear: both</option>";
 			html += " </select>";
 			b = _image.ui.createbutton(imgIdNum, "clear", html, function (img, button) {
 				button.elem.style.top = (img.offsetTop) + "px";
@@ -623,7 +630,7 @@
 
 		start: function ( resizeHandle, e ) {
 			ghostedit.history.saveUndoState();
-			if (e == null) { e = window.event; }
+			if (e === null) { e = window.event; }
 			var img = document.getElementById("ghostedit_image_" + resizeHandle.id.replace("ghostedit_image_resizehandle_",""));
 			
 			_image.originalMouseX = e.pageX || e.clientX + document.body.scrollLeft;
@@ -645,8 +652,8 @@
 		
 		handle: function (e) {
 			var img, resizeHandle, alignbutton, curMouseX, curMouseY, newWidth, newHeight, origImageWidth, origImageHeight, origMouseX, origMouseY, nativeImageWidth, nativeImageHeight;
-			e = window.event != null ? window.event : e;
-			if (_image.focusedimage == null) {
+			e = window.event !== null ? window.event : e;
+			if (_image.focusedimage === null) {
 				_image.unfocus ();
 			}
 			else {
@@ -669,7 +676,7 @@
 				
 				
 				// Calculate new width and height
-				if (img.style.cssFloat == "left" || img.style.styleFloat == "left") {
+				if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
 					newWidth = origImageWidth + (curMouseX - origMouseX);
 					newHeight = origImageHeight + (curMouseY - origMouseY);
 				}
@@ -700,11 +707,8 @@
 			}
 		},
 		
-		end: function (e) {
+		end: function () {
 			_image.justResized = true;
-			//_image.resize.handle(e);
-			//document.body.onmousemove = null;
-			//document.body.onmouseup = null;
 			ghostedit.util.removeEvent(document.body, "mousemove", _image.resize.handle);
 			ghostedit.util.removeEvent(document.body, "mouseup", _image.resize.end);
 			ghostedit.util.removeEvent(window, "blur", _image.resize.end);
@@ -714,10 +718,13 @@
 	
 	_image.ui = {
 		show: function (image) {
-			
+			var i, j = image;
+			j = i;
+			//TODO move image ui creation from focus function
 		},
 		
 		hide: function (image) {
+			var i;
 				image = image || _image.focusedimage;
 				
 				if (!image) return false;
@@ -744,7 +751,7 @@
 		},
 		
 		srcdialog: function () {
-			if (_image.focusedimage != false) {
+			if (_image.focusedimage !== false) {
 				//_image.focusedimage.alt = newalt;
 				ghostedit.ui.modal.show("<h3>Change Image Source</h3>" + 
 				"yada yada");
@@ -759,13 +766,13 @@
 			elem.id = "ghostedit_imagebutton_" + name + "_" + imgIdNum;
 			elem.setAttribute("data-ghostedit-elemtype","ghostedit_imagebutton");
 			elem.setAttribute("data-ghostedit-handler","image");
-			elem.className = "ghostedit_imagebutton"
-			elem.innerHTML = html;"&#215;";//"<img src='/static/images/x.png' style='vertical-align: middle' />";
+			elem.className = "ghostedit_imagebutton";
+			elem.innerHTML = html;//"&#215;";//"<img src='/static/images/x.png' style='vertical-align: middle' />";
 			
 			// Create button object
 			button = {
 				elem: elem
-			}
+			};
 			
 			button.reposition = positionfunc;
 			
@@ -776,9 +783,9 @@
 				click: function (event) { return ghostedit.util.cancelEvent(event); },
 				dblclick: function (event) { return ghostedit.util.cancelEvent(event); },
 				resizestart: function (event) { return ghostedit.util.cancelEvent(event); }
-			}
+			};
 			
-			button.show = function (img) {
+			button.show = function () {
 				ghostedit.contextuallayer.appendChild(button.elem);
 				button.elem.style.MozUserSelect = 'none';
 				button.elem.contentEditable = false;
@@ -789,22 +796,23 @@
 				button.elem.onclick = button.event.click;
 				button.elem.ondblclick = button.event.dblclick;
 				button.elem.onresizestart = button.event.resizestart;
-			}
+			};
 			
 			button.hide = function () {
 				button.elem.parentNode.removeChild(button.elem);
-			}
+			};
 			
 			button.register = function () {
 				_image.buttons.push(button);
-			}
+			};
 			
 			return button;
 		},
 		
 		setbuttonpositions: function () {
-			var img, border, resizeHandle, deletebutton, alignbutton, upbutton, downbutton;
-			if (img = _image.focusedimage) {
+			var i, img, border, resizeHandle;
+			img = _image.focusedimage;
+			if (img) {
 				
 				//Position border
 				border = document.getElementById("ghostedit_image_border_" + img.id.replace("ghostedit_image_",""));
@@ -817,7 +825,7 @@
 				if(!ghostedit.options.image.disableresize) {
 					resizeHandle = document.getElementById("ghostedit_image_resizehandle_" + img.id.replace("ghostedit_image_",""));
 					resizeHandle.style.top = (img.offsetTop + img.offsetHeight - 13) + "px";
-					if (img.style.cssFloat == "left" || img.style.styleFloat == "left") {
+					if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
 						resizeHandle.style.left = (img.offsetLeft + img.offsetWidth - 13) + "px";
 					}
 					else {
@@ -840,53 +848,6 @@
 		imageurlinput.blur();
 		_image.newImageBefore (null, null, false);
 		ghostedit.ui.modal.hide();
-	};
-	
-	_image.insertInline = function (elem, srcURL, skipResize) {
-		ghostedit.history.saveUndoState();
-		ghostedit.selection.restore();
-		if (elem == null) { elem = ghostedit.selection.savedRange.getStartNode(); }
-		elem = ghostedit.textblock.selection.getTextBlockNode ( elem );
-		
-		if (srcURL == null) { srcURL = document.getElementById("ghostedit_imageurlinput").value; }
-
-
-		if(document.createRange) {
-			newImg = document.createElement("img");
-			ghostedit.imgElemId += 1;
-			newImg.id = 'ghostedit_image_' + (1000 + ghostedit.imgElemId);
-			ghostedit.selection.savedRange.getNative().insertNode(newImg);
-		}
-		else if (document.selection) {
-			ghostedit.selection.savedRange.getNative().pasteHTML("<img id='ghostedit_image_" + (1000 + ghostedit.imgElemId) + "' />");
-		}
-		
-		var addedImage = document.getElementById('ghostedit_image_' + (1000 + ghostedit.imgElemId));
-		addedImage.setAttribute("data-ghostedit-elemtype", "image");
-		addedImage.setAttribute("data-ghostedit-handler", "image");
-		addedImage.contentEditable = 'false';
-		addedImage.unselectable = 'on';
-		var that = {
-			i: addedImage,
-			s: skipResize
-		}
-		that.callself = function () {
-			_image.onload(that.i, that.s, true)
-		}
-		addedImage.onload = that.callself;//function(img, skipResize){return _image.onload(img, skipResize, false)}(addedImage, skipResize);
-		addedImage.src = srcURL;
-		addedImage.onclick = function(e){_image.focus(this,e);ghostedit.util.cancelAllEvents(e);};
-		addedImage.ondragstart = function(event){
-			event = window.event ? window.event : event;
-			if (event.dataTransfer) {
-				event.dataTransfer.effectAllowed = "move";
-				event.dataTransfer.setData("Text", addedImage.id);
-			}
-			return true;
-			};
-		addedImage.ondraggesture = function(){return ghostedit.util.cancelEvent(e)};
-		addedImage.onresizestart = function(){return ghostedit.util.cancelAllEvents(e)};
-		addedImage.oncontrolselect = function(e){_image.focus(this,e);return ghostedit.util.cancelAllEvents(e)};
 	};
 	
 	_image.create = function (srcURL) {
@@ -918,21 +879,21 @@
 			}
 			return true;
 			};
-		newimg.ondraggesture = function(){return ghostedit.util.cancelEvent(e)};
-		newimg.onresizestart = function(){return ghostedit.util.cancelAllEvents(e)};
-		newimg.oncontrolselect = function(e){_image.focus(this,e);return ghostedit.util.cancelAllEvents(e)};
+		newimg.ondraggesture = function (e) { return ghostedit.util.cancelEvent(e); };
+		newimg.onresizestart = function (e) { return ghostedit.util.cancelAllEvents(e); };
+		newimg.oncontrolselect = function (e) { _image.focus(this,e);return ghostedit.util.cancelAllEvents(e); };
 		
 		return newimg;
 	};
 	
 	_image.newImageBefore = function (elem, srcURL, skipResize, wheretoinsert) {
-		var that, addedImage, parent, handler, result;
+		var that, addedImage, newImg, parent, handler, result, clearval;
 		ghostedit.history.saveUndoState();
-		if (elem == null) { elem = ghostedit.selection.savedRange.getStartNode(); }
+		if (elem === null) { elem = ghostedit.selection.savedRange.getStartNode(); }
 		elem = ghostedit.textblock.selection.getTextBlockNode ( elem );
 		if (wheretoinsert !== "after") wheretoinsert = "before";
 		
-		if (srcURL == null) { srcURL = document.getElementById("ghostedit_imageurlinput").value; }
+		if (srcURL === null) { srcURL = document.getElementById("ghostedit_imageurlinput").value; }
 
 		if (!document.getElementById("ghostedit_image_" + elem.id.replace("ghostedit_textblock_", ""))) {
 			newImg = document.createElement("img");
@@ -950,7 +911,7 @@
 			
 			if (!result) return false;
 		
-			var addedImage = document.getElementById('ghostedit_image_' + _image.elemid);
+			addedImage = document.getElementById('ghostedit_image_' + _image.elemid);
 			
 			// Set attributes and dom events
 			addedImage.setAttribute("data-ghostedit-elemtype", "image");
@@ -958,18 +919,18 @@
 			addedImage.contentEditable = 'false';
 			addedImage.unselectable = 'on';
 			addedImage.galleryimg = 'no'; //hide IE image toolbar
-			var clearval = (elem.style.clear == 'left') ? 'right' : 'left';
+			clearval = (elem.style.clear === 'left') ? 'right' : 'left';
 			addedImage.style.cssFloat = clearval;
 			addedImage.style.styleFloat = clearval;
 			addedImage.style.clear = elem.style.clear;
 			addedImage.style.marginRight = '20px';
-			var that = {
+			that = {
 				i: addedImage,
 				s: skipResize
-			}
+			};
 			that.callself = function () {
-				_image.onload(that.i, that.s, true)
-			}
+				_image.onload(that.i, that.s, true);
+			};
 			addedImage.onload = that.callself;//function(img, skipResize){return _image.onload(img, skipResize, false)}(addedImage, skipResize);
 			addedImage.src = srcURL;
 			_image.applyeventlisteners(addedImage);
@@ -984,66 +945,8 @@
 		}
 	};
 	
-	_image.newImageFrame = function () { /* LEGACY, DO NOT USE */
-		var that, addedImage;
-		ghostedit.history.saveUndoState();
-		elem = ghostedit.selection.savedRange.getStartNode();
-		elem = ghostedit.textblock.selection.getTextBlockNode ( elem );
-		
-		if(!elem || !elem.id) {
-			ghostedit.ui.message.show("Please select a paragraph or heading before trying to insert an image.", 2, "error");
-			return false;
-		}
-		
-		if (!document.getElementById("ghostedit_image_" + elem.id.replace("ghostedit_textblock_", ""))) {
-			newImg = document.createElement("div");
-			newImg.innerHTML = "<h3>Image Uploading</h3>";
-			newImg.id = 'ghostedit_image_' + elem.id.replace("ghostedit_textblock_", "");
-			//newImg.src = srcURL;set source afdowns otherwise onload is not fired in IE
-		
-			if (elem.parentNode != null) {
-				elem.parentNode.contentEditable = false;
-				elem.parentNode.insertBefore(newImg, elem);
-				elem.parentNode.contentEditable = true;
-			}
-			else {
-				ghostedit.ui.message.show("Please select a paragraph or heading before trying to insert an image.", 2, "error");
-			}
-			var addedImage = document.getElementById('ghostedit_image_' + elem.id.replace("ghostedit_textblock_", ""));
-			addedImage.setAttribute("data-ghostedit-elemtype","image");
-			addedImage.setAttribute("data-ghostedit-handler","image");
-			addedImage.contentEditable = 'false';
-			addedImage.unselectable = 'on';
-			addedImage.style.width = '240px';
-			addedImage.style.height = '160px';
-			addedImage.style.backgroundColor = '#EEE';
-			addedImage.style.cssFloat = 'left';
-			addedImage.style.styleFloat = 'left';
-			addedImage.style.marginRight = '20px';
-			addedImage.style.overflow = 'hidden';
-			addedImage.setAttribute("data-ghostedit-nativewidth", 0);
-			addedImage.setAttribute("data-ghostedit-nativeheight", 0);
-			addedImage.onclick = function(e){_image.focus(this,e);ghostedit.util.cancelAllEvents(e);};
-			addedImage.ondragstart = function(event){
-				event = window.event ? window.event : event;
-				if (event.dataTransfer) {
-					event.dataTransfer.effectAllowed = "move";
-					event.dataTransfer.setData("Text", addedImage.id);
-				}
-				return true;
-				};
-			addedImage.ondraggesture = function(){return ghostedit.util.cancelEvent(e)};
-			addedImage.onresizestart = function(){return ghostedit.util.cancelAllEvents(e)};
-			addedImage.oncontrolselect = function(e){_image.focus(this,e);return ghostedit.util.cancelAllEvents(e)};
-			return addedImage.id;
-			//document.getElementById('ghostedit_image_' + elem.id).style.width = '200px';
-			//document.getElementById('ghostedit_image_' + elem.id).style.height = '299px';
-			//document.getElementById('block_' + elem.id).style.width = (486 - document.getElementById('ghostedit_image_' + elem.id).style.width.replace("px","") - 30) + "px";
-		}
-	};
-	
 	_image.onload = function ( img, skipResize, hasWaited ) {
-		if (hasWaited == true) {
+		if (hasWaited === true) {
 			img.setAttribute("data-ghostedit-nativewidth", 0);
 			img.setAttribute("data-ghostedit-nativeheight", 0);
 			if (!ghostedit.options.image.disableresize && !skipResize && img.offsetWidth > 200) {
@@ -1059,32 +962,40 @@
 			var that = {
 				i: img,
 				s: skipResize
-			}
+			};
 			that.callself = function () {
-				_image.onload(that.i, that.s, true)
-			}
+				_image.onload(that.i, that.s, true);
+			};
 			setTimeout(that.callself, 20);
 		}
 	};
 	
 	_image.applyeventlisteners = function () {
-		var imgs, i, image;
+		var imgs, i, image, focus, dragstart;
 		imgs = ghostedit.editdiv.getElementsByTagName("img");
+		
+		focus = function (e) {
+			_image.focus(this,e);
+			return ghostedit.util.cancelAllEvents(e);
+		};
+		
+		dragstart = function(event){
+			event = window.event ? window.event : event;
+			if (event.dataTransfer) {
+				event.dataTransfer.effectAllowed = "move";
+				event.dataTransfer.setData("Text", image.id);
+			}
+			return true;
+		};
+		
 		for (i = 0; i < imgs.length; i++) {
 			image = imgs[i];
 			if (image.getAttribute("data-ghostedit-elemtype") !== "image") continue;
-			image.onclick = function(e){_image.focus(this,e);ghostedit.util.cancelAllEvents(e);};
-			image.ondragstart = function(event){
-				event = window.event ? window.event : event;
-				if (event.dataTransfer) {
-					event.dataTransfer.effectAllowed = "move";
-					event.dataTransfer.setData("Text", addedImage.id);
-				}
-				return true;
-				};
-			image.ondraggesture = function(){return ghostedit.util.cancelEvent(e)};
-			image.onresizestart = function(){return ghostedit.util.cancelAllEvents(e)};
-			image.oncontrolselect = function(e){_image.focus(this,e);return ghostedit.util.cancelAllEvents(e)};
+			image.onclick = focus;
+			image.ondragstart = dragstart;
+			image.ondraggesture = ghostedit.util.cancelEvent;
+			image.onresizestart = ghostedit.util.cancelAllEvents;
+			image.oncontrolselect = focus;
 		}
 	};
 	

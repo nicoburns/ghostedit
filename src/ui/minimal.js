@@ -2,9 +2,10 @@
 	var _ui = {
 		aelem: false,
 		context: null
-	}
+	},
+	ghostedit = window.ghostedit;
 	
-	_ui.el = {}
+	_ui.el = {};
 	
 	_ui.enable =  function () {
 		
@@ -12,11 +13,11 @@
 		ghostedit.event.trigger("ui:replace");
 				
 		// Register event listeners
-		ghostedit.event.addListener("ui:update", function () { _ui.update() }, "minimalui");
+		ghostedit.event.addListener("ui:update", function () { _ui.update(); }, "minimalui");
 		ghostedit.event.addListener ("ui:replace", function () { ghostedit.api.plugin.disable("minimalui"); }, "minimalui");
 		
 		// Define tempoary variables for UI creation
-		var toolbar, plugins, i;
+		var toolbar, plugins, i, linkplugin = false, listplugin = false;
 		
 		// Create toolbar wrapper
 		toolbar = document.createElement("div");
@@ -39,21 +40,26 @@
 			for (i = 0; i < plugins.length; i++) {
 				switch (plugins[i]) {
 					case "link":
-						_ui.insertbutton({label: "Insert Link", icon: "insert-link.png",
-							action: function () { ghostedit.api.link.create() }});
+						linkplugin = true;
 					break;
 					case "list":
-						_ui.insertbutton({label: "Bulleted List", icon: "list-unordered.png",
-							action: function () { ghostedit.api.list.toggle("unordered"); }});
-						_ui.insertbutton({label: "Numbered List", icon: "list-ordered.png",
-							action: function () { ghostedit.api.list.toggle("ordered"); }});
+						listplugin = true;
 					break;
 				}
 			}
 		}
 		
-		_ui.insertbutton({label: "Undo", icon: "undo16.png", action: function() { ghostedit.api.undo() } });
-		_ui.insertbutton({label: "Redo", icon: "redo16.png", action: function() { ghostedit.api.redo() } });
+		if (linkplugin) {
+			_ui.insertbutton({label: "Insert Link", icon: "insert-link.png", action: function () { ghostedit.api.link.create(); }});
+		}
+		
+		if (listplugin) {
+			_ui.insertbutton({label: "Bulleted List", icon: "list-unordered.png", action: function () { ghostedit.api.list.toggle("unordered"); }});
+			_ui.insertbutton({label: "Numbered List", icon: "list-ordered.png", action: function () { ghostedit.api.list.toggle("ordered"); }});
+		}
+
+		_ui.insertbutton({label: "Undo", icon: "undo16.png", action: function() { ghostedit.api.undo(); } });
+		_ui.insertbutton({label: "Redo", icon: "redo16.png", action: function() { ghostedit.api.redo(); } });
 		
 		// Insert toolbar into DOM
 		ghostedit.wrapdiv.insertBefore(toolbar, ghostedit.wrapdiv.firstChild);
@@ -62,7 +68,7 @@
 		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", ghostedit.util.cancelAllEvents);
 		ghostedit.util.addEvent(_ui.el.toolbar, "click", ghostedit.util.preventBubble);
 		ghostedit.util.addEvent(_ui.el.toolbar, "mousedown", ghostedit.util.preventBubble);
-	}
+	};
 	
 	_ui.disable = function () {
 		// Remove event listeners
@@ -70,10 +76,10 @@
 		
 		// Remove toolbar
 		ghostedit.wrapdiv.removeChild(_ui.el.toolbar);
-	}
+	};
 	
 	_ui.update = function () {
-		var elem, aelem = false, i, j, key, styleboxes, node, tagname, classname, pathstring = "", wordcount = "N/A", textcontent, ht;
+		var i, j, node, tagname, classname, ht;
 		ht = _ui.highlightmap;
 		
 		/* Reset ui elements to non highlighted state */
@@ -83,9 +89,9 @@
 	
 		for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
 			node = ghostedit.selection.nodepath[i];
-			tagname = node.tagName.toLowerCase()
+			tagname = node.tagName.toLowerCase();
 			classname = ghostedit.util.trim(node.className);
-			console.log()
+			
 			for (j = 0; j < ht.length; j++) {
 				if (ht[j].test.call(ht[j].data, tagname, classname, node)) {
 					ghostedit.util.addClass(ht[j].element, "current");
@@ -94,11 +100,11 @@
 		}
 	};
 	
-	_ui.quickbuttons = [],
-	_ui.highlightmap = [],
+	_ui.quickbuttons = [];
+	_ui.highlightmap = [];
 	
 	_ui.insertbutton = function (def /* {type, label, icon, action, style, highlighttag, highlightclass} */) {
-		var button, highlight;
+		var button;
 		if (!def || !def.label || !def.icon || !ghostedit.util.isFunction(def.action)) return false;
 		
 		
@@ -127,22 +133,22 @@
 		if (def.label) panelgroup.innerHTML += def.label + "<br />";
 		panelgroup.appendChild(input);
 		
-		ghostedit.util.addEvent(input, "click", function (event) { ghostedit.util.preventBubble(event) });
-		ghostedit.util.addEvent(input, "keypress", function (event) { ghostedit.util.preventBubble(event) });
-		ghostedit.util.addEvent(input, "keydown", function (event) { ghostedit.util.preventBubble(event) });
+		ghostedit.util.addEvent(input, "click", function (event) { ghostedit.util.preventBubble(event); });
+		ghostedit.util.addEvent(input, "keypress", function (event) { ghostedit.util.preventBubble(event); });
+		ghostedit.util.addEvent(input, "keydown", function (event) { ghostedit.util.preventBubble(event); });
 		ghostedit.util.addEvent(input, "keyup", def.onkeyup);
 	};
 			
 	_ui.insertstylebox = function (panelgroup, def /* {type, label, tagname, classnanme} */) {
-		var stylebox, label;
+		var stylebox;
 		
 		_ui.highlightmap.push({
 		element: stylebox,
 		data: { tagname: def.tagname, classname: def.classname !== undefined ? def.classname : ""},
-			test: function (tagname, classname, node) { return tagname === this.tagname && classname === this.classname; }
-		})
+			test: function (tagname, classname/*, node*/) { return tagname === this.tagname && classname === this.classname; }
+		});
 		
-		stylebox.onclick = function () { ghostedit.api.format.setStyle(def.tagname, def.classname) };
+		stylebox.onclick = function () { ghostedit.api.format.setStyle(def.tagname, def.classname); };
 	};
 	
 	ghostedit.api.plugin.register("minimalui", _ui);

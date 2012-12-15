@@ -17,7 +17,7 @@ module.exports = function(grunt) {
         '*/'
     },
     lint: {
-      files: ['grunt.js', 'lib/**/*.js', 'test/**/*.js']
+      files: ['grunt.js', 'lib/**/*.js', 'src/ghostedit.js', 'src/**/*.js']
     },
     qunit: {
       files: ['test/**/*.html']
@@ -67,7 +67,8 @@ module.exports = function(grunt) {
     },
     jshint: {
       options: {
-        curly: true,
+        devel: true,
+        curly: false,
         eqeqeq: true,
         immed: true,
         latedef: true,
@@ -76,7 +77,6 @@ module.exports = function(grunt) {
         sub: true,
         undef: true,
         boss: true,
-        eqnull: true,
         browser: true
       },
       globals: {}
@@ -85,6 +85,6 @@ module.exports = function(grunt) {
   });
 
   // Default task.
-  grunt.registerTask('default', 'qunit concat min');
+  grunt.registerTask('default', 'qunit lint concat min');
 
 };

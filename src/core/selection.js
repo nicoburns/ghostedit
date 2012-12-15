@@ -5,7 +5,9 @@
 			nodepath: [],
 			saved: {type: "none", data: null},
 			archived: {type: "none", data: null}
-		}
+		},
+		ghostedit = window.ghostedit,
+		lasso = window.lasso;
 		
 		_selection.save = function (updateui) {
 			var sel;
@@ -50,7 +52,7 @@
 			ghostedit.event.trigger("selection:change");
 			if (updateui) ghostedit.event.trigger("ui:update");
 			return true;
-		}
+		};
 		
 		_selection.restore = function (type, data, mustbevalid) {
 			if (!type || typeof type !== "string") type = _selection.saved.type;
@@ -114,36 +116,33 @@
 		_selection.isSameAs = function (sel) {
 			if (!sel || !sel.type) return false;
 			
-			if (sel.type !== _selection.saved.type) return false
+			if (sel.type !== _selection.saved.type) return false;
 			
 			if (sel.type === "none") return true;
 			// Else, call compare function from appropriate plugin
 			if (ghostedit.plugins[sel.type] && ghostedit.plugins[sel.type].selection.compare) {
-				return ghostedit.plugins[sel.type].selection.compare (sel.data, _selection.saved.data)
+				return ghostedit.plugins[sel.type].selection.compare (sel.data, _selection.saved.data);
 			}
 			return false;
 		};
 		
 		_selection.clear = function () {
 			lasso().clearSelection();
-			_selection.saved = {"type": "none", "data": null}
+			_selection.saved = {"type": "none", "data": null};
 		};
 		
 		_selection.isInEditdiv = function (elem) {
-			var elem, i;
-			if (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-				while (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-					if (elem == null) return false;
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+					if (elem === null) return false;
 					elem = elem.parentNode;
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 			}
 			return true;
 		};
 		
 		_selection.updatePathInfo = function (elem) {
-			var bold = false, italic = false, underline = false, aelem = false, i, formatboxes;
-			
 			if (!elem) elem = _selection.saved.data;
 			if (!elem.nodeType) elem = elem.getParentNode();
 			
@@ -153,21 +152,21 @@
 			
 			_selection.nodepath = [];
 			
-			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
 					
-					if (elem == null) return null;
+					if (elem === null) return null;
 					
-					if (elem.nodeType == 1)	_selection.nodepath.push(elem);
+					if (elem.nodeType === 1) _selection.nodepath.push(elem);
 					
 					elem = elem.parentNode;
 					
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 			}
 			
 			// Make sure rootnode/editdiv is also included in path
-			if (elem && elem.getAttribute("data-ghostedit-isrootnode") == "true") {
+			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
 					_selection.nodepath.push(elem);
 			}
 		};
@@ -180,7 +179,7 @@
 
 			while (!ghostedit.dom.isGhostBlock(node)) {
 				node = node.parentNode;
-				if (node == null) return false;
+				if (node === null) return false;
 			}
 			
 			return node;

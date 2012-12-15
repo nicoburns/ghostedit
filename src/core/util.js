@@ -23,35 +23,34 @@
 		};
 		
 		_util.cloneObject = function (obj) {
-		    // Handle the 3 simple types, and null or undefined
-		    if (null === obj || "object" != typeof obj) return obj;
-		    
-		    // Handle Date
-		    if (obj instanceof Date) {
-		        var copy = new Date();
-		        copy.setTime(obj.getTime());
-		        return copy;
-		    }
-		
-		    // Handle Array
-		    if (obj instanceof Array) {
-		        var copy = [], len, i;
-		        for (i = 0, len = obj.length; i < len; ++i) {
-		            copy[i] = _util.cloneObject(obj[i]);
-		        }
-		        return copy;
-		    }
-		
-		    // Handle Object
-		    if (obj instanceof Object) {
-		        var copy = {}, attr;
-		        for (attr in obj) {
-		            if (obj.hasOwnProperty(attr)) copy[attr] = _util.cloneObject(obj[attr]);
-		        }
-		        return copy;
-		    }
-		
-		    //throw new Error("Unable to copy obj! Its type isn't supported.");
+			var copy, len, i, attr;
+			// Handle the 3 simple types, and null or undefined
+			if (null === obj || "object" !== typeof obj) return obj;
+			
+			// Handle Date
+			if (obj instanceof Date) {
+				copy = new Date();
+				copy.setTime(obj.getTime());
+				return copy;
+			}
+			
+			// Handle Array
+			if (obj instanceof Array) {
+				copy = [];
+				for (i = 0, len = obj.length; i < len; ++i) {
+					copy[i] = _util.cloneObject(obj[i]);
+				}
+				return copy;
+			}
+			
+			// Handle Object
+			if (obj instanceof Object) {
+				copy = {};
+				for (attr in obj) {
+					if (obj.hasOwnProperty(attr)) copy[attr] = _util.cloneObject(obj[attr]);
+				}
+				return copy;
+			}
 		};
 		
 		_util.addClass = function (elem, c) {
@@ -86,17 +85,21 @@
 		};
 		
 		_util.preventDefault = function (e) {
+			// Standards based browsers
 			if (e && e.preventDefault) {
 				e.preventDefault();
 			}
+			// ie <= 8
 			return false;
 		};
 		
 		_util.preventBubble = function (e) {
-			if (e && e.preventDefault) {
+			// Standards based browsers
+			if (e && e.stopPropagation) {
 				e.stopPropagation();
 			}
-			window.event.cancelBubble = true; //IE cancel bubble;
+			// ie <= 8
+			if (window.event) window.event.cancelBubble = true;
 		};
 		
 		_util.addEvent = function (elem, eventType, handle) {
@@ -118,87 +121,92 @@
 		};
 		
 		_util.ajax = function (URL, method, params, sHandle, dataType) {
-			var method, time, connector, responseData, ajaxRequest;
+			var time, connector, xhr;
 			
 			if (!URL || !method) return false;
 			
-		   	if(ajaxRequest = getXmlHttpRequestObject()) {
-			    	method = method.toUpperCase();
-					time = +new Date,connector;
-					if(URL.indexOf('?') != -1) {
-					URL.indexOf('?') == URL.length-1 ? connector = "" : connector = "&";
-				}
-				else {
-					connector = "?";
-				}
-				(method === "GET") ? ajaxRequest.open(method, URL+connector+time+"&IsAjaxRequest=true&ajax=true&"+params, true) : ajaxRequest.open(method, URL+connector+time+"&IsAjaxRequest=true&ajax=true", true)
-				ajaxRequest.onreadystatechange = function () {
-					if(ajaxRequest.readyState == 4) {
-						if(ajaxRequest.status == "200") {
-							responseData = dataType == "xml" ? ajaxRequest.responseXML : ajaxRequest.responseText;
-							if(sHandle != null){sHandle(true, responseData);}
-							return true;
-						}
-						else{
-							if(sHandle != null){sHandle(false, responseData);}
-							return false;
-						}
-					}
-				}
-				ajaxRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-				//ajaxRequest.setRequestHeader("Content-length", params.length);
-				//ajaxRequest.setRequestHeader("Connection", "close");
-				(params != null && method === "POST") ? ajaxRequest.send(params) : ajaxRequest.send();
+			// Get XHR object
+			xhr = false;
+			if(window.XMLHttpRequest && (window.location.protocol !== "file:" || !window.ActiveXObject)) {
+				xhr = new window.XMLHttpRequest();
 			}
 			else {
-				return false;
+				try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
+				catch (e) { try { xhr = new window.ActiveXObject("MSXML2.XMLHTTP"); } catch (e2) {} }
+			}
+			if (!xhr) return false;
+			
+			// Prepare variables
+			method = method.toUpperCase();
+			time = new Date().getTime();
+			URL = URL.replace(/(\?)+$/, "");
+			connector = (URL.indexOf('?') === -1) ? "?" : "&";
+			//connector = (URL.indexOf('?') === URL.length - 1) ? "" : "&";
+
+			// Open ajax Request
+			if (method === "GET") {
+				xhr.open(method, URL + connector + time + "&" + params, true);
+			}
+			else {
+				xhr.open(method, URL + connector + time, true);
 			}
 			
-			/* Utility function used by ajax function */
-			function getXmlHttpRequestObject() {
-				if(window.XMLHttpRequest && (window.location.protocol !== "file:" || !window.ActiveXObject)) {
-					return new window.XMLHttpRequest();
-				}
-				else {
-					try {
-						return new window.ActiveXObject("Microsoft.XMLHTTP");
+			// Define function to handle response
+			xhr.onreadystatechange = function () {
+				var responseData;
+				if(xhr.readyState === 4) {
+					if(xhr.status === "200") {
+						responseData = (dataType === "xml") ? xhr.responseXML : xhr.responseText;
+						if(sHandle !== null){ sHandle(true, responseData); }
+						return true;
 					}
-					catch(e) {
-						try {
-							return new window.ActiveXObject("MSXML2.XMLHTTP");
-						}
-						catch(e) {return false;}
+					else{
+						if(sHandle !== null){ sHandle(false, responseData); }
+						return false;
 					}
 				}
+			};
+			
+			// Set HTTP headers
+			xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			//xhr.setRequestHeader("Content-length", params.length);
+			//xhr.setRequestHeader("Connection", "close");
+			
+			// Send ajax request
+			if (method === "POST" && params !== null) {
+				xhr.send(params);
+			}
+			else {
+				xhr.send();
 			}
 		};
 		
 		_util.detectEngines = function() {
-
-		    //rendering engines
-		    var engine = {ie: 0, gecko: 0, webkit: 0, khtml: 0, opera: 0, ver: null};
 		
-		    //detect rendering engines/browsers
-		    var ua = navigator.userAgent;    
-		    if (window.opera){
-		        engine.ver = window.opera.version();
-		        engine.opera = parseFloat(engine.ver);
-		    } else if (/AppleWebKit\/(\S+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.webkit = parseFloat(engine.ver);
-		    } else if (/KHTML\/(\S+)/.test(ua) || /Konqueror\/([^;]+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.khtml = parseFloat(engine.ver);
-		    } else if (/rv:([^\)]+)\) Gecko\/\d{8}/.test(ua)){    
-		        engine.ver = RegExp["$1"];
-		        engine.gecko = parseFloat(engine.ver);
-		    } else if (/MSIE ([^;]+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.ie = parseFloat(engine.ver);
-		    }
-		
-		    //return it
-		    return engine;
+			//rendering engines
+			var engine = {ie: 0, gecko: 0, webkit: 0, khtml: 0, opera: 0, ver: null};
+			
+			// Detect rendering engines/browsers
+			var ua = navigator.userAgent;
+			if (window.opera){
+				engine.ver = window.opera.version();
+				engine.opera = parseFloat(engine.ver);
+			} else if (/AppleWebKit\/(\S+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.webkit = parseFloat(engine.ver);
+			} else if (/KHTML\/(\S+)/.test(ua) || /Konqueror\/([^;]+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.khtml = parseFloat(engine.ver);
+			} else if (/rv:([^\)]+)\) Gecko\/\d{8}/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.gecko = parseFloat(engine.ver);
+			} else if (/MSIE ([^;]+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.ie = parseFloat(engine.ver);
+			}
+			
+			//return it
+			return engine;
 		
 		};
 		

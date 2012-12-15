@@ -1,6 +1,8 @@
 (function (window, undefined) {
 	
-	var _clipboard = {};
+	var _clipboard = {}, _paste, _cut,
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
 	
 	_clipboard.init = function () {
 		_clipboard.paste.init();
@@ -21,7 +23,7 @@
 		ghostedit.event.addListener("init:after", function () {
 			ghostedit.util.addEvent(ghostedit.editdiv, "paste", function(event) { _paste.handle(event); });
 		}, "clipboard");
-	}
+	};
 	
 	_paste.handle = function (e) {//elem no longer used?
 		
@@ -68,10 +70,7 @@
 	};
 	
 	_paste.process = function () {
-		var elem, elems, caretelemtype, isfirstelem, i, j, currentelem, currentelemtype, subelem, appenddata = "";
-		var newelems, nodetagtype, nodelist = "", insertelem, previnsertelem, nextelem, tempelem, images, handler, target, result, source, nodepos, position;
-		var blocks, range, child, index, block;
-		var pastenode, collapsed, hasmerged;
+		var pastenode, collapsed, hasmerged, handler, target, result, source, position;
 		
 		// Extract pasted content into a new element
 		pastenode = document.createElement("div");
@@ -212,7 +211,7 @@
 			}
 			
 			source = ghostedit.dom.getNextSiblingGhostBlock(source);
-		};
+		}
 		
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", true).select();
 		if (ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
@@ -258,9 +257,9 @@
 		ghostedit.event.addListener("init:after", function () {
 			ghostedit.util.addEvent(ghostedit.editdiv, "cut", function(event) { _cut.handle(event); });
 		}, "clipboard");
-	}
+	};
 	
-	_cut.handle = function (e) {
+	_cut.handle = function () {
 		
 		// Save editor state, and save undo data in case paste functions mess up undo stack
 		ghostedit.history.saveUndoState();

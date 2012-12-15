@@ -1,17 +1,18 @@
 (function(window, undefined) {
 	
-	var _history = {}
+	var _history = {},
+	ghostedit = window.ghostedit;
 	
 	_history.init = function () {
 		// Set initial variables
 		_history.reset();
 		
 		// Add listener to check whether the selection has changed since the last undo save
-		ghostedit.event.addListener("selection:change", function () {_history.selectionchanged = true});
+		ghostedit.event.addListener("selection:change", function () { _history.selectionchanged = true; });
 		
 		// Export undo and redo function to the api
-		ghostedit.api.undo = function () { return _history.undo(); }
-		ghostedit.api.redo = function () { return _history.redo(); }
+		ghostedit.api.undo = function () { return _history.undo(); };
+		ghostedit.api.redo = function () { return _history.redo(); };
 	};
 	
 	_history.reset = function () {
@@ -22,8 +23,9 @@
 	};
 	
 	_history.saveUndoState = function (force) {
-		var tempImg = null, i, j, editwrap = ghostedit.editdiv, tempArr, undoPoint, undoData, savedcontent = "", savedselcontent = "", currrentcontent;
-		var contentchanged, selectionchanged, currentstate, undostate;
+		var undoPoint, undoData, contentchanged, selectionchanged, currentstate, undostate,
+		editwrap = ghostedit.editdiv;
+		
 		if (force !== true) force = false;
 		
 		ghostedit.event.trigger("presaveundostate");
@@ -50,7 +52,7 @@
 		
 		// Calcuate whether the selection or content have changed
 		if (!force) {
-			contentchanged = !!(undostate.content.string !== currentstate.content.string);
+			contentchanged = (undostate.content.string !== currentstate.content.string) ? true : false;
 			selectionchanged = !(ghostedit.selection.isSameAs(undostate.selection));
 		}
 		
@@ -77,9 +79,10 @@
 	};
 	
 	_history.restoreUndoPoint = function (undopoint) {
-		var undoData = _history.undoData, undostate, content;
-		if(!undoData[undopoint] || undoData[undopoint].content.string.length < 1) return false;
+		var undoData = _history.undoData,
 		undostate = undoData[undopoint];
+		if (!undostate || undostate.content.string.length < 1) return false;
+		
 		
 		ghostedit.editdiv.innerHTML = "";//undoData[undopoint].selectioncontent;
 		ghostedit.editdiv.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
@@ -89,8 +92,10 @@
 	};
 	
 	_history.undo = function () {
-		var undoPoint = _history.undoPoint, undoData = _history.undoData;
-		var editwrap = ghostedit.editdiv,imgs,i;
+		var undoPoint = _history.undoPoint,
+		undoData = _history.undoData,
+		editwrap = ghostedit.editdiv;
+		
 		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
 			
 			ghostedit.event.trigger("preundo");
@@ -120,8 +125,10 @@
 	};
 	
 	_history.redo = function () {
-		var undoPoint = _history.undoPoint, undoData = _history.undoData;
-		var editwrap = ghostedit.editdiv,imgs,i;
+		var undoPoint = _history.undoPoint,
+		undoData = _history.undoData,
+		editwrap = ghostedit.editdiv;
+		
 		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
 			
 			ghostedit.event.trigger("preredo");

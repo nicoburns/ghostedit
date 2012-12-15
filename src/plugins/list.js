@@ -3,7 +3,9 @@
 	var _list = {
 		elemid: 0,
 		itemelemid: 0
-	};
+	},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
 	
 	_list.enable = function () {	
 		// Register event listeners
@@ -35,70 +37,47 @@
 	};
 	
 	_list.ghostevent = function (eventtype, target, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false, newtarget, result, elemtype;
-		switch (eventtype) {
-			case "delete":
-				elemtype = target.getAttribute("data-ghostedit-elemtype");
-				if (elemtype === "list") {
-					if (sourcedirection === "ahead" || sourcedirection === "behind") {
-						newtarget = (sourcedirection === "ahead") ? ghostedit.dom.getLastChildGhostBlock(target) : ghostedit.dom.getFirstChildGhostBlock(target);
-						return _list.ghostevent("delete", newtarget, sourcedirection, params);
-					}
-					else return false;
+		var newtarget, result, elemtype;
+		if (eventtype === "delete") {
+			elemtype = target.getAttribute("data-ghostedit-elemtype");
+			if (elemtype === "list") {
+				if (sourcedirection === "ahead" || sourcedirection === "behind") {
+					newtarget = (sourcedirection === "ahead") ? ghostedit.dom.getLastChildGhostBlock(target) : ghostedit.dom.getFirstChildGhostBlock(target);
+					return _list.ghostevent("delete", newtarget, sourcedirection, params);
 				}
-				else if (elemtype === "listitem") {
-					//alert(target.id + sourcedirection);
-					if (sourcedirection === "ahead" || sourcedirection === "behind") {
-						newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
-						result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
-					}
-					else if (sourcedirection === "top") {
-						result = ghostedit.event.sendBackwards("delete", target, params);
-					}
-					else if (sourcedirection === "bottom") {
-						result = ghostedit.event.sendForwards("delete", target, params);
-					}
-					//alert(target.id + sourcedirection + result);
-					return result;
+				else return false;
+			}
+			else if (elemtype === "listitem") {
+				//alert(target.id + sourcedirection);
+				if (sourcedirection === "ahead" || sourcedirection === "behind") {
+					newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
+					result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
 				}
-			break;
-			/*case "keydown":
-				switch (params.keycode) {
-					case 8: // backspace
-						return ghostedit.plugins.textblock.event.backspace(target, params.event);
-					break;
-					case 46: //delete
-						return ghostedit.plugins.textblock.event.deletekey (target, params.event);
-					break;
+				else if (sourcedirection === "top") {
+					result = ghostedit.event.sendBackwards("delete", target, params);
 				}
-			break;
-			case "keypress":
-				switch (params.keycode) {
-					case 13: // enter
-						return ghostedit.plugins.textblock.event.enterkey (target, params.event);
-					break;
+				else if (sourcedirection === "bottom") {
+					result = ghostedit.event.sendForwards("delete", target, params);
 				}
-			break;*/
+				//alert(target.id + sourcedirection + result);
+				return result;
+			}
 		}
 		
 	};
 	
 	_list.dom = {	
 		addchild: function (target, wheretoinsert, sourceelem, newElem, params) {
-			var parent, listitem, result = false, newelemisempty = false;
+			var parent, listitem, result = false, newelemisempty = false, anchorelem, handler;
 			
 			if (params && params.contentlength !== false) {
 				newelemisempty = (params.contentlength < 1) ? true : false;
 			}
 			
 			// Get target list if listelem is targetted
-			//DEV console.log("target 2:")
-			//DEV console.log(target);
 			if (target.getAttribute("data-ghostedit-elemtype") === "listitem") {
 				target = ghostedit.dom.getParentGhostBlock (target);
 			}
-			//DEV console.log("target 1:")
-			//DEV console.log(target);
 			if (target.getAttribute("data-ghostedit-elemtype") !== "list") return false;
 			
 			// Get listitem-parent of anchor elem
@@ -108,7 +87,6 @@
 				if (anchorelem === null) return false;
 			}
 			
-			//alert(ghostedit.dom.getNextSiblingGhostBlock(anchorelem) + newElem.innerHTML);
 			// If last listelem and inserted node empty (caret is at end), then instead create paragraph after list
 			if (newelemisempty && ghostedit.dom.getNextSiblingGhostBlock(anchorelem) === false && ghostedit.plugins.textblock.isEmpty(sourceelem)) {
 				parent = ghostedit.dom.getParentGhostBlock (target);
@@ -180,12 +158,8 @@
 	
 	_list.selection = {
 		deleteContents: function (target, collapse) {
-			var i, startelem, endelem, startblock, endblock, startcblock, 
-			endcblock, childblocks, sametagtype, savedcontent, range, savedrange, dodelete, 
-			r1, r2, b1, b2, firsttextblocktype, dummynode, insertId, insertedelem,
-			startofblock, endofblock, selrange, atverystart, atveryend,
-			firstchildblock, lastchildblock, condition, childblocktype, 
-			status, message, handler, block;
+			var i, startblock, endblock, startcblock, cblock, endcblock, childblocks, dodelete, 
+			startofblock, endofblock, selrange, atverystart, atveryend,firstchildblock, lastchildblock, handler;
 			
 			atverystart = false;
 			atveryend = false;
@@ -297,7 +271,6 @@
 					childcount = 0;
 					node = sourcenode;
 					do {
-						console.log(node);
 						parsednode = _list.inout.importListItem(node);
 						if (parsednode) {
 							childcount += 1;
@@ -316,7 +289,7 @@
 		
 		exportHTML: function (target) {
 			if (!target || !ghostedit.dom.isGhostBlock(target)) return false;
-			var finalCode = "", item, listtype;
+			var finalCode = "", item, listtype, result, elem;
 			
 			switch (target.getAttribute("data-ghostedit-elemtype")) {
 				case "list":
@@ -328,8 +301,9 @@
 					do {
 						result = _list.inout.exportHTML (item);
 						if (result) finalCode += result.content;
+						item = ghostedit.dom.getNextSiblingGhostBlock(item);
 					}
-					while (item = ghostedit.dom.getNextSiblingGhostBlock(item));
+					while (item);
 					
 					// If no list items return code, return false
 					if (finalCode.length < 1) return false;
@@ -361,7 +335,7 @@
 		},
 		
 		importList: function (sourcenode) {
-			var i, list, handler, result, elem, tagname;
+			var i, list, result, elem, tagname;
 			if (!sourcenode || !sourcenode.tagName) return false;
 			
 			tagname = sourcenode.tagName.toLowerCase();
@@ -391,8 +365,8 @@
 			return list;
 		},
 		importListItem: function (sourcenode) {
-			var i, list, handler, result, listitem, child, textblock = false;
-			if (!sourcenode || !sourcenode.tagName || !sourcenode.tagName.toLowerCase() === "li") return false;
+			var listitem, child, textblock = false;
+			if (!sourcenode || !sourcenode.tagName || sourcenode.tagName.toLowerCase() !== "li") return false;
 			listitem = _list.createItem();
 					
 			child = ghostedit.dom.getFirstChildElement (sourcenode);
@@ -420,9 +394,8 @@
 	
 	_list.paste = {
 		handle: function (target, source, position) {
-			var node, nodetype, i, pastednodes, cleannode, html, newnode, text, 
-			selnode, blocks, textblock, anchor, result,
-			sourcelistitem, sourcetextblock, targetlistitem, targettextblock, nextitem;
+			var anchor, result, sourcelistitem, sourcetextblock, targetlistitem, targettextblock,
+			nextitem, node1, node2, startblock, endblock, firstitem, item;
 			
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
 			if (source.tagName.toLowerCase() !== "ol" && source.tagName.toLowerCase() !== "ul") return false;
@@ -439,7 +412,6 @@
 					case false:
 						//this shouldn't happen, but just in case...
 						return true;
-					break;
 					case "atverystart":
 						node1 = ghostedit.dom.getPreviousSiblingGhostBlock(target);
 						node2 = target;
@@ -523,7 +495,7 @@
 			anchor = startblock;
 			firstitem = item = ghostedit.dom.getFirstChildGhostBlock(source);
 			
-			while (item = ghostedit.dom.getFirstChildGhostBlock(source)) {
+			while ((item = ghostedit.dom.getFirstChildGhostBlock(source))) {
 				_list.dom.addchild(target, "after", anchor, item);
 				anchor = item;
 			}
@@ -560,6 +532,7 @@
 	};
 	
 	_list.create = function (listtype) {
+		var newElem;
 		if (listtype.toLowerCase() !== "ol") listtype = "ul";
 		
 		// Create element, and assign id and content
@@ -576,6 +549,7 @@
 	};
 	
 	_list.createItem = function (textblocktype) {
+		var newElem;
 		
 		// Create element, and assign id and content
 		newElem = document.createElement("li");
@@ -619,6 +593,7 @@
 	};
 	
 	_list.merge = function (list1, list2, collapse) {
+		var child;
 		
 		// If lists are same node, return that node
 		if (list1 === list2) return list1;
@@ -634,7 +609,7 @@
 		if (list1.tagName.toLowerCase() !== list2.tagName.toLowerCase()) return false;
 		
 		// Move all list items in list2 to list1
-		while (child = ghostedit.dom.getFirstChildGhostBlock(list2)) {
+		while ((child = ghostedit.dom.getFirstChildGhostBlock(list2))) {
 			list1.appendChild (child);
 		}
 		
@@ -645,7 +620,7 @@
 	};
 	
 	_list.mergeItems = function (item1, item2, collapse) {
-		var tblock1, tblock2;
+		var tblock1, tblock2, result;
 		
 		// If collapse === false don't merge
 		if (collapse === false) return item1;
@@ -708,10 +683,7 @@
 	
 	
 	_list.toggle = function (listtype) {
-		var i, inlist, list, intextbock, textblock, incontainer, container, node, 
-		newlist = false, afterlist = false, tagname, parent, handler,
-		beforenodes = [], selnodes = [], afternodes = [], selrange, range, isafterstart, isbeforeend,
-		anchor, newblocks = [];
+		var i, inlist, list, textblock, incontainer, container, node, range, intextblock;
 		
 		listtype = (listtype === "ordered") ? "ol" : "ul";
 		
@@ -744,7 +716,8 @@
 		// If selection contained in (non-list) textblock, convert to list
 		if (intextblock && !inlist) {
 			_list.convertTextblock(textblock, listtype);
-			if (range = lasso().restoreFromDOM()) range.select();
+			range = lasso().restoreFromDOM();
+			if (range) range.select();
 			ghostedit.selection.save();
 			return true;
 		}
@@ -752,7 +725,8 @@
 		// Else, if selection contained in list, convert list items to other list type, or to textblocks
 		if (inlist) {
 			_list.convertList(list, listtype);
-			if (range = lasso().restoreFromDOM()) range.select();
+			range = lasso().restoreFromDOM();
+			if (range) range.select();
 			ghostedit.selection.save();
 			return true;
 		}
@@ -761,7 +735,8 @@
 		// skippping images, and then do massive tidy up at the end.
 		if (incontainer) {
 			_list.convertContainerContents(container, listtype);
-			if (range = lasso().restoreFromDOM()) range.select();
+			range = lasso().restoreFromDOM();
+			if (range) range.select();
 			ghostedit.selection.save();
 			return true;
 		}
@@ -798,8 +773,8 @@
 	};
 	
 	_list.convertList = function (list, listtype) {
-			var i, lists = [], node, newlist = false, afterlist = false, tagname, parent, handler;
-			var beforenodes = [], selnodes = [], afternodes = [], selrange, range, isafterstart, isbeforeend, anchor;
+			var i, lists = [], node, newlist = false, afterlist = false, parent, handler;
+			var beforenodes = [], selnodes = [], afternodes = [], isafterstart, isbeforeend, anchor;
 			
 			node = ghostedit.dom.getFirstChildGhostBlock (list);
 			if (!node) { _list.remove (list); return true; }
@@ -823,7 +798,7 @@
 					afternodes.push (node);
 				}
 			}
-			while (node = ghostedit.dom.getNextSiblingGhostBlock(node));
+			while ((node = ghostedit.dom.getNextSiblingGhostBlock(node)));
 			
 			// Get list parent and handles for inserting and removing GhostBlocks
 			parent = ghostedit.dom.getParentGhostBlock(list);
@@ -894,10 +869,7 @@
 	};
 	
 	_list.convertContainerContents = function (container, listtype) {
-		var i, inlist, list, intextbock, textblock, incontainer, node, newlist = false, afterlist = false, 
-		tagname, parent, handler, beforenodes = [], selnodes = [], afternodes = [], selrange, range,
-		isafterstart, isbeforeend, anchor, newblocks = [];
-		
+		var i, node, selnodes = [], isafterstart, isbeforeend;
 		
 		node = ghostedit.dom.getFirstChildGhostBlock (container);
 			
@@ -914,7 +886,7 @@
 			else if (!isbeforeend) break;
 
 		}
-		while (node = ghostedit.dom.getNextSiblingGhostBlock(node));
+		while ((node = ghostedit.dom.getNextSiblingGhostBlock(node)));
 		
 		for(i = 0; i < selnodes.length; i++) {
 			node = selnodes[i];
@@ -934,7 +906,7 @@
 	
 	
 	_list.tidy = function (list) {
-		var prev, next, child, nextfirstchild, parent, handler, result;
+		var prev, next, child, result;
 		
 		// If list contains no list items, remove list
 		child = ghostedit.dom.getFirstChildGhostBlock(list);

@@ -1,6 +1,8 @@
 (function (window, undefined) {
 	
-	var _textblock = {};
+	var _textblock = {},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
 	
 	_textblock.enable = function () {
 				
@@ -19,46 +21,39 @@
 		// Clone range object after undo save to avoid accidentally modifying the saved range objects
 		ghostedit.event.addListener("postsaveundostate", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
-				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone()
+				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone();
 			}
 		});
 		
 		ghostedit.api.insert = ghostedit.api.insert || {};
-		ghostedit.api.insert.character = function (character) {return _textblock.insert.character(character); }
-		ghostedit.api.insert.br = function () {return _textblock.insert.br; }
+		ghostedit.api.insert.character = function (character) { return _textblock.insert.character(character); };
+		ghostedit.api.insert.br = function () {return _textblock.insert.br; };
 		
 		return true;
-	}
+	};
 	
 	_textblock.ghostevent = function (eventtype, target, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false;
 		switch (eventtype) {
 			case "delete":
 				return _textblock.event.textdelete (target, sourcedirection, params);
-			break;	
 			case "keydown":
 				switch (params.keycode) {
 					case 8: // backspace
 						return _textblock.event.backspace(target, params.event);
-					break;
 					case 46: //delete
 						return _textblock.event.deletekey (target, params.event);
-					break;
 				}
 			break;
 			case "keypress":
-				switch (params.keycode) {
-					case 13: // enter
-						return _textblock.event.enterkey (target, params.event);
-					break;
-				}
+				// Enter key
+				if (params.keycode === 13) return _textblock.event.enterkey (target, params.event);
 			break;
 		}
 	};
 		
 	_textblock.event = {
 		textdelete: function (target, sourcedirection, params){
-			var parent, handler;
+			var parent, handler, block;
 			switch (sourcedirection) {
 				case "ahead":
 					ghostedit.history.saveUndoState();
@@ -70,7 +65,7 @@
 						_textblock.mozBrs.tidy(target);
 						params.merge.callback();
 						//params.sourceblock.parentNode.removeChild(params.sourceblock);
-						lasso().selectNode("ghostedit_selection_marker").select()//.deleteContents();
+						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
 						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
 						ghostedit.selection.save();
 					}
@@ -82,20 +77,19 @@
 					}
 					ghostedit.history.saveUndoState(true);
 					return true;
-				break;
 				case "behind":
-					var block = ghostedit.selection.getContainingGhostBlock();
-					var params =  {
+					block = ghostedit.selection.getContainingGhostBlock();
+					params =  {
 						"merge": {
 							"contenttype": "inlinehtml",
 							"sourcecontent": target.innerHTML,
 							"callback": ghostedit.util.preparefunction(function (node) {
-										var parent = node.parentNode;
-										var handler = parent.getAttribute("data-ghostedit-handler");
-										ghostedit.plugins[handler].dom.removechild(parent, node)
+										var parent = node.parentNode,
+										handler = parent.getAttribute("data-ghostedit-handler");
+										ghostedit.plugins[handler].dom.removechild(parent, node);
 									}, false, target)
 						}
-					}
+					};
 					ghostedit.event.sendBackwards("delete", target, params);
 					//----------------------------------
 					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
@@ -103,7 +97,6 @@
 					//ghostedit.event.cancelKeypress = true;
 					//return ghostedit.util.cancelEvent ( e );
 					return true;
-				break;
 			}
 		},
 		
@@ -124,7 +117,7 @@
 							var handler = parent.getAttribute("data-ghostedit-handler");
 							ghostedit.plugins[handler].dom.removechild(parent, node);}, false, block)
 					}
-				}
+				};
 				ghostedit.event.sendBackwards("delete", block, params );
 
 				ghostedit.event.cancelKeypress = true;
@@ -149,7 +142,6 @@
 		},
 		
 		enterkey: function (elem, e) {
-			var result;
 			ghostedit.history.saveUndoState();
 			
 			if (e.shiftKey) {
@@ -164,7 +156,7 @@
 			ghostedit.util.cancelEvent ( e );
 			return true;
 		}
-	}
+	};
 	
 	_textblock.selection = {
 		compare: function (r1, r2) {
@@ -206,10 +198,10 @@
 		},
 		
 		getTextBlockNode: function (elem) {
-			if (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-elemtype") != "textblock") {
-				while (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-elemtype") != "textblock") {
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-elemtype") !== "textblock") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-elemtype") !== "textblock") {
 					elem = elem.parentNode;
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 			}
 			return elem;
@@ -226,11 +218,11 @@
 		
 		//Assumes selection saved manually
 		isAtStartOftextblock: function () {
-			var caretIsAtStart = false, tempnode, range, selrange, savedRange, i, isequal, prevchar, startpoint;
-			var textblocknode, wholenode;
+			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode;
 			
 			if(document.createRange) {
-				if(ghostedit.selection.savedRange.isCollapsed() && ghostedit.selection.savedRange.getNative().startOffset == 0) {
+				range = ghostedit.selection.savedRange;
+				if(range.isCollapsed() && range.getNative().startOffset === 0) {
 					caretIsAtStart = true;
 					tempnode = ghostedit.selection.savedRange.getStartNode();
 				}
@@ -241,18 +233,17 @@
 				while (tempnode.nodeType !== 1 || tempnode.getAttribute("data-ghostedit-elemtype") !== "textblock") {
 					if (tempnode !== tempnode.parentNode.childNodes[0]) {
 						isequal = false;
-						//alert(tempnode.parentNode.childNodes[0].nodeType);
-						//alert(tempnode.parentNode.childNodes[0].length);
-						if((tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0)
-								|| (tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
+						if((tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0) ||
+								(tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
 							//Deals with empty text nodes at start of textblock elem
 							for(i = 1; i < tempnode.parentNode.childNodes.length; i += 1) {
-								if (tempnode == tempnode.parentNode.childNodes[i]) {
+								firstnode = tempnode.parentNode.childNodes[0];
+								if (tempnode === tempnode.parentNode.childNodes[i]) {
 									isequal = true;
 									break;
 								}
-								else if(!(tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0)
-								&& !(tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
+								else if(!(firstnode.nodeType === 3 && firstnode.length === 0) &&
+									!(firstnode.nodeType === 1 && firstnode.className === "moz_dirty")) {
 									break;
 								}
 							}
@@ -290,8 +281,7 @@
 		
 		//Assumes selection saved manually
 		isAtEndOftextblock: function () {
-			/* Check if caret is at very start of textblock elem */
-			var caretIsAtEnd = false, tempnode, selrange, range, savedRange, i, isequal, prevchar, rangefrag, elemfrag, textblocknode, prevchar, savedrange, endpoint, wholenode;
+			var caretIsAtEnd = false, selrange, range, rangefrag, elemfrag, textblocknode, endpoint;
 			
 			if (!ghostedit.selection.savedRange.isCollapsed()) return false;
 			
@@ -301,7 +291,7 @@
 				rangefrag = document.createElement("div");
 				rangefrag.appendChild( ghostedit.selection.savedRange.getNative().cloneContents() );
 				
-				range = ghostedit.selection.savedRange.getNative()
+				range = ghostedit.selection.savedRange.getNative();
 				range.setEnd(textblocknode, textblocknode.childNodes.length);
 				elemfrag = document.createElement("div");
 				rangefrag.appendChild( range.cloneContents() );
@@ -309,7 +299,7 @@
 				_textblock.mozBrs.clear(rangefrag);
 				_textblock.mozBrs.clear(elemfrag);
 				
-				if(rangefrag.innerHTML == elemfrag.innerHTML) {
+				if(rangefrag.innerHTML === elemfrag.innerHTML) {
 					caretIsAtEnd = true;
 				}
 			}
@@ -343,8 +333,8 @@
 				
 				//If only one end has moved, then it's not from the middle
 				if (onlyfrommiddle) {
-					if (range.startContainer == wordstart.node && range.startOffset == wordstart.offset) return range;
-					if (range.endContainer == wordend.node && range.endOffset == wordend.offset) return range;
+					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return range;
+					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return range;
 				}
 				
 				range.setStart(wordstart.node, wordstart.offset);
@@ -353,7 +343,7 @@
 			else {
 				range.expand("word");
 				//alert(range.getHTML());
-				if (range.htmlText.split().reverse()[0] == " ") {
+				if (range.htmlText.split().reverse()[0] === " ") {
 					range.moveEnd("character", -1);
 				}
 			}
@@ -361,11 +351,11 @@
 		},
 		
 		findwordstart: function (node, offset) {
-			var r, range, leftnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
+			var leftnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
 			
 			if (!node || !node.nodeType) return false;
 			
-			//Handle text node
+			// Handle text node
 			if (node.nodeType === 3) {
 				leftnodecontent = node.nodeValue.substring(0, offset);
 				stroffset = leftnodecontent.search(wordendregex);
@@ -378,22 +368,22 @@
 					return { node: node, offset: totalstroffset };
 				}
 			}
-			//Handle Element
+			
+			// Handle Element
 			else if (node.nodeType === 1) {
 				if (offset > 0) {
 					return _textblock.selection.findwordstart(node.childNodes[offset - 1], node.childNodes[offset - 1].length);
 				}
 			}
 			
-			//If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") == "textblock"){
-				return {
-					node: node,
-					offset: offset
-				}
+			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
+			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+				return {"node": node, "offset": offset};
 			}
-			//If node is a NOT ghostedit_textblock: check previous node
-			if (prevnode = node.previousSibling) {
+			
+			// If node is a NOT ghostedit_textblock: check previous node
+			prevnode = node.previousSibling;
+			if (prevnode) {
 				if (prevnode.nodeType === 3) {
 					return _textblock.selection.findwordstart(prevnode, prevnode.nodeValue.length);
 				}
@@ -401,7 +391,7 @@
 					return _textblock.selection.findwordstart(prevnode, prevnode.childNodes.length);
 				}
 			}
-			//If node is a NOT ghostedit_textblock and no previousSibling: move up tree
+			// If node is a NOT ghostedit_textblock and no previousSibling: move up tree
 			else {
 				return _textblock.selection.findwordstart(node.parentNode, ghostedit.dom.getNodeOffset(node));
 			}
@@ -410,12 +400,12 @@
 		},
 		
 		findwordend: function (node, offset) {
-			//alert(node + offset + " : " + node.childNodes.length);
-			var r, range, rightnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
+			var rightnodecontent, stroffset, totalstroffset, nextnode,
+			wordendregex = /\s|[\!\?\.\,\:\;\"]/;
 			
 			if (!node || !node.nodeType) return false;
 			
-			//Handle text node
+			// Handle text node
 			if (node.nodeType === 3) {
 				rightnodecontent = node.nodeValue.substring(offset);
 				stroffset = rightnodecontent.search(wordendregex);
@@ -425,26 +415,25 @@
 					return { node: node, offset: totalstroffset };
 				}
 			}
-			//Handle Element
+			
+			// Handle Element
 			else if (node.nodeType === 1) {
 				if (offset < node.childNodes.length) {
 					return _textblock.selection.findwordend(node.childNodes[offset], 0);
 				}
 			}
 			
-			
-			//If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.className && node.getAttribute("data-ghostedit-elemtype") == "textblock"){
-				return {
-					node: node,
-					offset: offset
-				}
+			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
+			if (node.className && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+				return {"node": node, "offset": offset};
 			}
-			//If node is a NOT ghostedit_textblock: check next node
-			else if (nextnode = node.nextSibling) {
+			
+			// If node is a NOT ghostedit_textblock: check next node
+			nextnode = node.nextSibling;
+			if (nextnode) {
 				return _textblock.selection.findwordend(nextnode, 0);
 			}
-			//If node is a NOT ghostedit_textblock and no nextSibling: move up tree
+			// If node is a NOT ghostedit_textblock and no nextSibling: move up tree
 			else {
 				return _textblock.selection.findwordend(node.parentNode, ghostedit.dom.getNodeOffset(node) + 1);
 			}
@@ -477,12 +466,9 @@
 		},
 		
 		importHTML: function (source) {
-			var newTextBlock, tagname, node, childcount, prevnode, sourcecontent;
+			var newTextBlock, tagname, node, childcount, prevnode, nodetype, parsednode;
 			
 			nodetype = _textblock.inout.isHandleableNode(source);
-			//console.log("textblock import:");
-			//console.log(nodetype);
-			//console.log(source.outerHTML);
 			switch (nodetype) {
 				case "block":
 					// Create TextBlock
@@ -502,6 +488,7 @@
 					newTextBlock.ondragleave = function(){return false;};
 					newTextBlock.ondragover = function(){return false;};
 					newTextBlock.ondrop = function(e){
+						var elem, elemid;
 						// This function does basic image paragraph changing dnd
 						elemid = e.dataTransfer.getData("Text") || e.srcElement.id;
 						//alert(elemid); TODO drag drop
@@ -513,7 +500,6 @@
 								
 					_textblock.mozBrs.tidy (newTextBlock);
 					return newTextBlock;
-				break;
 				case "child":
 				case "contents":
 				case "text":
@@ -535,7 +521,6 @@
 					
 					_textblock.mozBrs.tidy (newTextBlock);
 					return (childcount > 0) ? newTextBlock : false;
-				break;
 			}
 			return false;
 		},
@@ -553,8 +538,8 @@
 			finalCode += "<" + elem.tagName.toLowerCase();
 			
 			// Extract styles
-			if (elem.style.textAlign != "") { stylecode += "text-align:" + elem.style.textAlign + ";"; }
-			if (elem.style.clear != "") stylecode += "clear:" + elem.style.clear + ";";
+			if (elem.style.textAlign !== "") { stylecode += "text-align:" + elem.style.textAlign + ";"; }
+			if (elem.style.clear !== "") stylecode += "clear:" + elem.style.clear + ";";
 			
 			if (stylecode.length > 0) finalCode += " style='" + stylecode + "'";
 			
@@ -573,7 +558,7 @@
 		},
 		
 		isHandleableNode: function (node) {
-			var blocktags, childtags, nodetag, i;
+			var nodetag;
 			if (!node || !node.nodeType) return false;
 			
 			// Handle textnode case
@@ -609,38 +594,27 @@
 					text = node.nodeValue.replace(/[\n\r\t]/g,"");
 					// Return node, or false if node is empty
 					return (text.length > 0) ? document.createTextNode(text) : false;
-				break;
 				case "block":
 				case "child":
 					cleannode = document.createElement(node.tagName.toLowerCase());
-				case "contents":
-				default:
-					// If allowed childnode, or contentsnode recurse on children, and append
-					cleannode = cleannode || document.createDocumentFragment();
-					nodes = node.childNodes;
-					for (i = 0; i < nodes.length; i++) {
-						if (cleanchild = _textblock.inout.parse(nodes[i])) {
-							cleannode.appendChild(cleanchild);
-						}
-					}
-					return cleannode;
-				break;
-				/*default:
-					if (typeof nodetype === "function") {
-						cleannode = nodetype(node);
-						return cleannode || false;
-					}
-				break;*/
+				/*case "contents":
+					Do nothing*/
 			}
-			
-			// Else return false
-			return false;
+
+			// For 'block', 'child' and 'contents' nodes: recurse on children and append
+			cleannode = cleannode || document.createDocumentFragment();
+			nodes = node.childNodes;
+			for (i = 0; i < nodes.length; i++) {
+				cleanchild = _textblock.inout.parse(nodes[i]);
+				if (cleanchild) cleannode.appendChild(cleanchild);
+			}
+			return cleannode;
 		}
 	};
 	
 	_textblock.paste = {			
 		handle: function (target, source, position) {
-			var node, nodetype, i, pastednodes, cleannode, html, newnode, text, selnode, blocks, parent, handler, marker;
+			var blocks;
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
 			
 			console.log(position);
@@ -696,7 +670,6 @@
 			
 			// If not first element, then split and tidy
 			_textblock.mozBrs.clear(source);
-			console.log("HEYHEYHEY");
 			ghostedit.selection.saved.data.collapseToStart().select();
 			lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
 			blocks = _textblock.split(target);
@@ -740,7 +713,7 @@
 		},
 		
 		clean: function (target) {
-			var cleannode, nodes, content, cleanchild;
+			var content, cleanchild, i;
 			if (!target || !target.nodeType) return false;
 			
 			// If target is empty, return target
@@ -749,9 +722,8 @@
 			// Else loop through content, getting clean versions of each child node recursively
 			content = document.createDocumentFragment();
 			for (i = 0; i < target.childNodes.length; i++) {
-				if (cleanchild = _textblock.paste.cleanChild(target.childNodes[i])) {
-					content.appendChild(cleanchild);
-				}
+				cleanchild = _textblock.paste.cleanChild(target.childNodes[i]);
+				if (cleanchild)	content.appendChild(cleanchild);
 			}
 			
 			// Replace target content with new content
@@ -762,7 +734,7 @@
 		},
 		
 		cleanNode: function (node) {
-			var cleannode, nodes, cleanchild, nodetype;
+			var cleannode, nodes, cleanchild, nodetype, i;
 			if (!node || !node.nodeType) return false;
 			
 			nodetype = _textblock.paste.isHandleableNode(node);
@@ -771,19 +743,16 @@
 					// Strip whitespace and tab characters from textnodes
 					node.nodeValue = node.nodeValue.replace(/[\n\r\t]/g,"");
 					return node;
-				break;
 				case "child":
 				case "contents":
 					// If allowed childnode, or contentsnode recurse on children, and append
 					cleannode = (nodetype === "child") ? node.cloneNode(false) : document.createDocumentFragment();
 					nodes = node.childNodes;
 					for (i = 0; i < nodes.length; i++) {
-						if (cleanchild = _textblock.paste.cleanNode(nodes[i])) {
-							cleannode.appendChild(cleanchild);
-						}
+						cleanchild = _textblock.paste.cleanNode(nodes[i]);
+						if (cleanchild)	cleannode.appendChild(cleanchild);
 					}
 					return cleannode;
-				break;
 			}
 			
 			// Else return false
@@ -824,7 +793,7 @@
 		var editdiv, i;
 		editdiv = ghostedit.editdiv;
 		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
+			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
@@ -839,7 +808,7 @@
 		var editdiv, i;
 		editdiv = ghostedit.editdiv;
 		for(i = editdiv.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
+			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
@@ -855,7 +824,7 @@
 		editdiv = ghostedit.editdiv;
 		childCount = 0;
 		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
+			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				childCount += 1;
 			}
 		}
@@ -895,6 +864,7 @@
 		newElem.ondragleave = function(){return false;};
 		newElem.ondragover = function(){return false;};
 		newElem.ondrop = function(e){
+			var elem, elemid;
 			// This function does basic image paragraph changing dnd
 			elemid = e.dataTransfer.getData("Text") || e.srcElement.id;
 			//alert(elemid); TODO drag drop
@@ -911,7 +881,7 @@
 	};
 	
 	_textblock.remove = function (textblockelem) {
-		var savedElemContent, editdiv, focuselem, i, thisone, s, range, offsetLeft, offsetTop, brNode;
+		var savedElemContent, editdiv, focuselem, i, thisone, textblockelems;
 
 		ghostedit.selection.save();
 		ghostedit.history.saveUndoState();
@@ -995,14 +965,11 @@
 		
 		// Otherwise, append block2content to block1 and delete block2
 		block1.innerHTML += "<span id='ghostedit_marker'>&#x200b;</span>" + block2.innerHTML;
-		//DEV console.log(block1.parentNode.cloneNode(true));
 		parent = block2.parentNode;
 		handler = parent.getAttribute("data-ghostedit-handler");
 		ghostedit.plugins[handler].dom.removechild(parent, block2);
-		//block2.parentNode.removeChild(block2);
 		_textblock.mozBrs.tidy(block1);
-		//DEV console.log(block1.parentNode.cloneNode(true));
-		lasso().selectNode("ghostedit_marker").select()//.deleteContents();
+		lasso().selectNode("ghostedit_marker").select();//.deleteContents();
 		document.getElementById("ghostedit_marker").parentNode.removeChild(document.getElementById("ghostedit_marker"));
 		return block1;
 	};
@@ -1014,7 +981,7 @@
 		atstart = (_textblock.selection.isAtStartOftextblock() === true) ? true : false;
 		atend = (_textblock.selection.isAtEndOftextblock() === true) ? true : false;
 		wheretoinsert = (atstart && !atend) ? "before" : "after";
-		elemtype = (wheretoinsert == "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
+		elemtype = (wheretoinsert === "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
 		
 		//console.log("atstart - " + atstart+ "\natend - " + atend + "\nwhere - " + wheretoinsert);
 		
@@ -1174,23 +1141,23 @@
 			
 			ghostedit.api.format.bold = function () {
 				_textblock.format.formatSelected(_textblock.format.bold);
-			},
+			};
 			
 			ghostedit.api.format.italic = function () {
 				_textblock.format.formatSelected(_textblock.format.italic);
-			},
+			};
 			
 			ghostedit.api.format.underline = function () {
 				_textblock.format.formatSelected(_textblock.format.underline);
-			},
+			};
 			
 			ghostedit.api.format.strikethrough = function () {
 				_textblock.format.formatSelected(_textblock.format.strikethrough);
-			},
+			};
 			
 			ghostedit.api.format.textColor = function (color) {
 				_textblock.format.formatSelected(_textblock.format.textColor, {"color": color});
-			}
+			};
 		},
 		
 		useCommand: function (commandType, param) {
@@ -1204,38 +1171,34 @@
 		},
 		
 		getNextNode: function (node) {
-		    if (node.firstChild)
-		        return node.firstChild;
-		    while (node) {
-		        if (node.nextSibling)
-		            return node.nextSibling;
-		        node = node.parentNode;
-		    }
+			if (node.firstChild) return node.firstChild;
+			while (node) {
+				if (node.nextSibling) return node.nextSibling;
+				node = node.parentNode;
+			}
 		},
 		
 		getNodesInRange: function (range) {
-		    var start = range.getStartNode();
-		    var end = range.getEndNode();
-		    var commonAncestor = range.getParentNode();
-		    var nodes = [];
-		    var node;
-		
-		    // walk parent nodes from start to common ancestor
-		    for (node = start.parentNode; node; node = node.parentNode) {
-		        nodes.push(node);
-		        if (node == commonAncestor)
-		            break;
-		    }
-		    nodes.reverse();
-		
-		    // walk children and siblings from start until end is found
-		    for (node = start; node; node = _textblock.format.getNextNode(node)) {
-		        nodes.push(node);
-		        if (node == end)
-		            break;
-		    }
-		
-		    return nodes;
+			var start = range.getStartNode(),
+			end = range.getEndNode(),
+			commonAncestor = range.getParentNode(),
+			nodes = [],
+			node;
+			
+			// walk parent nodes from start to common ancestor
+			for (node = start.parentNode; node; node = node.parentNode) {
+				nodes.push(node);
+				if (node === commonAncestor) break;
+			}
+			nodes.reverse();
+			
+			// walk children and siblings from start until end is found
+			for (node = start; node; node = _textblock.format.getNextNode(node)) {
+				nodes.push(node);
+				if (node === end) break;
+			}
+			
+			return nodes;
 		},
 		
 		useCommandOnWord: function (command) {
@@ -1248,7 +1211,7 @@
 					range.getNative().insertNode(marker);
 				}
 				if (!document.createRange && document.selection) {
-					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>")
+					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>");
 				}
 				range.selectNode("ghostedit_marker");
 				range = _textblock.selection.extendtoword(range, true);
@@ -1273,7 +1236,7 @@
 			ghostedit.selection.save();
 		},
 		
-		bold: function (params) {
+		bold: function () {
 			_textblock.format.useCommand("bold");
 		},
 		
@@ -1295,10 +1258,10 @@
 		
 		
 		formatSelected: function (formatFunc, params) {
+			var elem, startpara, endpara, oldelem, doend, i, descendantblocks;
 			ghostedit.selection.save();
 			ghostedit.history.saveUndoState();
 			
-			var elem, startpara, endpara, selrange, oldelem, doend, i, j;
 			startpara = _textblock.selection.getStartTextBlockNode();
 			endpara = _textblock.selection.getEndTextBlockNode();
 		
@@ -1346,7 +1309,7 @@
 		},
 		
 		formatTextBlock: function (textblock, range, formatFunc, params) {
-			var startofblock, endofblock, selrange, newelem;
+			var startofblock, endofblock, newelem;
 			
 			if (!params) params = {};
 			params.textblock = textblock;
@@ -1384,7 +1347,7 @@
 				var elem = lasso().setToSelection().getParentElement();
 				while (!ghostedit.dom.isGhostBlock(elem)) {
 					elem = elem.parentNode;
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 				if (!_textblock.isTextBlock(elem)) return false;
 				elem.style.textAlign = params.alignDirection;
@@ -1393,7 +1356,7 @@
 
 		// .tagName is readonly -> need to remove element and add new one
 		setTagType: function (params) {
-			var target, tagtype, newclass, parent, handler, targetid, newTextBlock;
+			var target, tagtype, newclass, parent, targetid, newTextBlock;
 			
 			target = params.textblock;
 			tagtype = params.tagname;

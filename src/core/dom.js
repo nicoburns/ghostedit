@@ -25,7 +25,7 @@
 	};
 
 	_dom.cloneContent = function (node) {
-		var frag = document.createDocumentFragment(), child;
+		var child, i, frag = document.createDocumentFragment();
 		for (i = 0; i < node.childNodes.length; i++) {
 			child = node.childNodes[i];
 			frag.appendChild(child.cloneNode(true));
@@ -34,7 +34,7 @@
 	};
 
 	_dom.parse = function (node, rules) {
-		var parsednode = false, nodes, parsedchild, nodetype, i, j, value, text, tagname, tagrules, attribute, style;
+		var parsednode = false, nodes, parsedchild, i, j, value, text, tagname, tagrules, attribute, style;
 		if (!node || !rules || !node.nodeType) return false;
 		
 		rules.textnode = rules.textnode || {};
@@ -67,7 +67,8 @@
 		if (!tagrules.ignorechildren) {
 			nodes = node.childNodes;
 			for (i = 0; i < nodes.length; i++) {
-				if (parsedchild = _dom.parse(nodes[i], rules)) {
+				parsedchild = _dom.parse(nodes[i], rules);
+				if (parsedchild) {
 					parsednode.appendChild(parsedchild);
 				}
 			}
@@ -82,7 +83,7 @@
 				attribute = tagrules.attributes[i];
 				
 				// Handle simple (no rules) case
-				if (typeof attribute === "string") { attribute = {"name": attribute} }
+				if (typeof attribute === "string") attribute = {"name": attribute};
 				
 				// Get value of attribute on source node
 				if (typeof attribute.name !== "string") break;
@@ -120,11 +121,11 @@
 				style = tagrules.styles[i];
 				
 				// Handle simple (no rules) case
-				if (typeof style === "string") { style = {"name": style} };
+				if (typeof style === "string") style = {"name": style};
 				
 				// Get value of style on source node
 				if (typeof style.name !== "string") break;
-				if (style.name === "float") style.name = (node.style["cssFloat"]) ? "cssFloat" : "styleFloat";
+				if (style.name === "float") style.name = (node.style.cssFloat) ? "cssFloat" : "styleFloat";
 				value  = style.value || node.style[style.name];
 				if (value === undefined) break;
 				style.copy = true;
@@ -183,8 +184,10 @@
 	};
 
 	_dom.isChildGhostBlock = function (elem, parent) {
+		var i;
+		
 		if (!elem || !parent || !parent.childNodes) return false;
-		if (elem.nodeType != 1) return false;
+		if (elem.nodeType !== 1) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
 		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
@@ -207,7 +210,7 @@
 		
 		do {
 			node = node.parentNode;
-			if (node == null) return false;
+			if (node === null) return false;
 		}
 		while (!_dom.isGhostBlock(node));
 		
@@ -215,7 +218,7 @@
 	};
 
 	_dom.getFirstChildGhostBlock = function (node) {
-		var children;
+		var children, i;
 		
 		if (!node || !node.childNodes) return false;			
 		
@@ -232,7 +235,7 @@
 	};
 
 	_dom.getLastChildGhostBlock = function (node) {
-		var children;
+		var children, i;
 		
 		if (!node || !node.childNodes) return false;			
 		
@@ -291,28 +294,28 @@
 	};
 
 	_dom.getParentElement = function (node) {
-		if (node.nodeType != 1) {
-			while (node.nodeType != 1) {
+		if (node.nodeType !== 1) {
+			while (node.nodeType !== 1) {
 				node = node.parentNode;
-				if (node == null) return null;
+				if (node === null) return null;
 			}
 		}
 		return node;
 	};
 
 	_dom.isDescendant = function (parent, child) {
-	     var node = child.parentNode;
-	     while (node != null) {
-	         if (node == parent) {
-	             return true;
-	         }
-	         node = node.parentNode;
-	     }
-	     return false;
+		var node = child.parentNode;
+		while (node !== null) {
+			if (node === parent) {
+				return true;
+			}
+			node = node.parentNode;
+		}
+		return false;
 	};
 
 	_dom.getFirstChildElement = function (node) {
-		var children;
+		var children, i;
 		
 		if (!node || !node.childNodes) return false;			
 		
@@ -335,7 +338,7 @@
 			while (!condition.apply(this, args)) {
 				elem = elem.parentNode;
 				args[0] = elem;
-				if (elem == null) return false;
+				if (elem === null) return false;
 			}
 		}
 		return elem;

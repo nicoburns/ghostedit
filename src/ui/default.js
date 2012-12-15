@@ -3,71 +3,71 @@
 		aelem: false,
 		context: null,
 		elemInEnglish: { "h1": "Heading 1", "h2": "Heading 2", "h3": "Heading 3", "p": "Paragraph", "div": "Generic Box", "a": "Link", "b": "Bold", "strong": "Bold", "i": "Italic", "em": "Italic",
-				   "u": "Underline", "img": "Image", "ul": "Bulletted list", "ol": "Numbered list", "li": "List Item", "strike": "Strikethrough"},
+					"u": "Underline", "img": "Image", "ul": "Bulletted list", "ol": "Numbered list", "li": "List Item", "strike": "Strikethrough"},
 		definition: {
 			quickbuttons: [
-				{label: "Save", icon: "save16.png", action: function() { ghostedit.api.save() } },
-				{label: "Undo", icon: "undo16.png", action: function() { ghostedit.api.undo() } },
-				{label: "Redo", icon: "redo16.png", action: function() { ghostedit.api.redo() } }
+				{label: "Save", icon: "save16.png", action: function() { ghostedit.api.save(); } },
+				{label: "Undo", icon: "undo16.png", action: function() { ghostedit.api.undo(); } },
+				{label: "Redo", icon: "redo16.png", action: function() { ghostedit.api.redo(); } }
 			],
 			tabs: [
 				{name: "textblock", label: "Format", enabled: true,
 					contents: [
 					{type: "group", style: "padding-top: 3px", contents: [
 						{type: "button", id: "bold", label: "Bold", icon: "format-bold.png",
-							highlighttest: function (t) {return t === "b" || t === "strong"},
+							highlighttest: function (t) {return t === "b" || t === "strong";},
 							action: function () { ghostedit.api.format.bold(); }},
 						{type: "button", id: "italic", label: "Italic", icon: "format-italic.png",
-								highlighttest: function (t) {return t === "i" || t == "em"},
+								highlighttest: function (t) {return t === "i" || t === "em";},
 								action: function () { ghostedit.api.format.italic(); }},
 						{type: "button", id: "underline", label: "Underline", icon: "format-underline.png", 
-								highlighttest: function (t) {return t === "u"},
+								highlighttest: function (t) {return t === "u";},
 								action: function () { ghostedit.api.format.underline(); }},
 						{type: "button", id: "strikethrough", label: "Strikethrough", icon: "format-strikethrough.png",
-								highlighttest: function (t) {return t === "strike"},
+								highlighttest: function (t) {return t === "strike";},
 								action: function () { ghostedit.api.format.strikethrough(); }},
 						{type: "br"},
 						{type: "button", id: "align-left", label: "Align Left", icon: "align-left.png",
-								highlighttest: function (t, c, n) {return n.style.textAlign === "left" || n.style.textAlign === ""},
+								highlighttest: function (t, c, n) {return n.style.textAlign === "left" || n.style.textAlign === "";},
 								action: function () { ghostedit.api.format.alignText("left"); }},
 						{type: "button", id: "align-center", label: "Align Center", icon: "align-center.png", 
-								highlighttest: function (t, c, n) {return n.style.textAlign === "center"},
+								highlighttest: function (t, c, n) {return n.style.textAlign === "center";},
 								action: function () { ghostedit.api.format.alignText("center"); }},
 						{type: "button", id: "align-right", label: "Align Right", icon: "align-right.png", 
-								highlighttest: function (t, c, n) {return n.style.textAlign === "right"},
+								highlighttest: function (t, c, n) {return n.style.textAlign === "right";},
 								action: function () { ghostedit.api.format.alignText("right"); }},
 						{type: "button", id: "align-justify", label: "Justify", icon: "align-justified.png", 
-								highlighttest: function (t, c, n) {return n.style.textAlign === "justify"},
+								highlighttest: function (t, c, n) {return n.style.textAlign === "justify";},
 								action: function () { ghostedit.api.format.alignText("justify"); }}
-					 ]},
-					 {type: "seperator"},
-					 {type: "group", style: "padding-top: 3px", contents: [
+					]},
+					{type: "seperator"},
+					{type: "group", style: "padding-top: 3px", contents: [
 						{type: "button", id: "list-unordered", label: "Bulleted List", icon: "list-unordered.png",
 							action: function () { ghostedit.api.list.toggle("unordered"); }},
 						{type: "button", id: "list-ordered", label: "Numbered List", icon: "list-ordered.png",
-							action: function () { ghostedit.api.list.toggle("ordered"); }},
-					 ]},
-					 {type: "seperator"},
-					 {type: "group", contents: [
-					 	{type: "stylebox", label: "Paragraph", tagname: "p"},
-					 	{type: "stylebox", label: "LeadPara", tagname: "p", classname: "LeadingParagraph"},
-					 	{type: "stylebox", label: "Heading 1", tagname: "h1"},
-					 	{type: "stylebox", label: "Heading 2", tagname: "h2"},
-					 	{type: "stylebox", label: "Heading 3", tagname: "h3"}
-					 ]}
+							action: function () { ghostedit.api.list.toggle("ordered"); }}
+					]},
+					{type: "seperator"},
+					{type: "group", contents: [
+						{type: "stylebox", label: "Paragraph", tagname: "p"},
+						{type: "stylebox", label: "LeadPara", tagname: "p", classname: "LeadingParagraph"},
+						{type: "stylebox", label: "Heading 1", tagname: "h1"},
+						{type: "stylebox", label: "Heading 2", tagname: "h2"},
+						{type: "stylebox", label: "Heading 3", tagname: "h3"}
+					]}
 					]},
 				{name: "insert", label: "Insert", enabled: true,
 					contents: [
 					{type: "group", style: "padding-top: 3px", contents: [
 						{type: "button", id: "insert-link", label: "Insert Link", icon: "insert-link.png",
-							action: function () { ghostedit.api.link.create() }},
+							action: function () { ghostedit.api.link.create(); }},
 						{type: "button", id: "insert-image", label: "Insert Image", icon: "insert-image.png",
-								action: function () { ghostedit.api.image.insert() }}
+								action: function () { ghostedit.api.image.insert(); }}
 					]},
 					{type: "seperator"},
 					{type: "group", contents: [
-					 	{type: "specialchar", character: "&#224;"},
-					 	{type: "specialchar", character: "&#225;"},
+						{type: "specialchar", character: "&#224;"},
+						{type: "specialchar", character: "&#225;"},
 						{type: "specialchar", character: "&#226;"},
 						{type: "specialchar", character: "&#227;"},
 						{type: "specialchar", character: "&#228;"},
@@ -118,45 +118,46 @@
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Name",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("name", this.value) } }
+							onkeyup: function () { ghostedit.plugins.save.updateparameter("name", this.value); } }
 					]},
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Url Slug",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("url", this.value) } }
+							onkeyup: function () { ghostedit.plugins.save.updateparameter("url", this.value); } }
 					]},
 					{type: "group", contents: [
 						{type: "button", id: "save", label: "Save", icon: "save.png",
-								action: function () { ghostedit.api.save() }},
+								action: function () { ghostedit.api.save(); }}
 					]},
 					{type: "seperator"},
 					{type: "group", contents: [
 						{type: "button", id: "about", label: "About GhostEdit & credits", icon: "about.png",
-								action: function () { ghostedit.api.defaultui.showabout() }}
+								action: function () { ghostedit.api.defaultui.showabout(); }}
 					]}
 					]},
 				{name: "link", label: "Link", enabled: false,
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "linkurl", label: "Link URL", width: "400px",
-							onkeyup: function () { ghostedit.api.link.updateurl(this.value) } }
+							onkeyup: function () { ghostedit.api.link.updateurl(this.value); } }
 					]},
 					{type: "group", contents: [
 						{type: "button", label: "Open link in new tab", icon: "openlink.png",
-							action: function () { ghostedit.api.link.open() }}
+							action: function () { ghostedit.api.link.open(); }}
 					]}
 					]},
 				{name: "image", label: "Image", enabled: false,
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "imagealt", label: "Description / Alt text",
-							onkeyup: function () { ghostedit.api.image.updatealttext(this.value) } }
+							onkeyup: function () { ghostedit.api.image.updatealttext(this.value); } }
 					]}
 					]}
 			]
 		}
-	}
+	},
+	ghostedit = window.ghostedit;
 	
-	_ui.el = {}
+	_ui.el = {};
 	
 	_ui.enable =  function () {
 		
@@ -164,8 +165,8 @@
 		ghostedit.event.trigger("ui:replace");
 				
 		// Register event listeners
-		ghostedit.event.addListener("ui:update", function () { _ui.update() }, "defaultui");
-		ghostedit.event.addListener("ui:message", function (params) { _ui.message.show(params) }, "defaultui");
+		ghostedit.event.addListener("ui:update", function () { _ui.update(); }, "defaultui");
+		ghostedit.event.addListener("ui:message", function (params) { _ui.message.show(params); }, "defaultui");
 		ghostedit.event.addListener ("ui:replace", function () { ghostedit.api.plugin.disable("defaultui"); }, "defaultui");
 		
 		ghostedit.event.addListener ("selection:change", function () {
@@ -181,7 +182,7 @@
 				}
 				if(node.tagName && node.tagName.toLowerCase() === "a") {
 					if(ghostedit.plugins.link.focusedlink) {
-						document.getElementById('ghostedit_defaultui_textfield_linkurl').value = (ghostedit.plugins.link.focusedlink.href == "http:") ? "http://" : ghostedit.plugins.link.focusedlink.href;
+						document.getElementById('ghostedit_defaultui_textfield_linkurl').value = (ghostedit.plugins.link.focusedlink.href === "http:") ? "http://" : ghostedit.plugins.link.focusedlink.href;
 					}
 					
 					ghostedit.event.trigger("ui:newcontext", {context: "link"});
@@ -218,7 +219,7 @@
 		if (!ghostedit.options.defaultui.wordcount) ghostedit.options.defaultui.wordcount = true;
 		
 		// Define tempoary variables for UI creation
-		var def, toolbar, qbanchor, quickbutton, tabselect, tab, messagearea, statusarea,  i, modal, modalbg;
+		var def, toolbar, qbanchor, tabselect, messagearea, statusbar,  i, modal, modalbg;
 		def = _ui.definition;
 		
 		// Create toolbar wrapper
@@ -265,12 +266,12 @@
 		ghostedit.wrapdiv.insertBefore(toolbar, ghostedit.wrapdiv.firstChild);
 		
 		// Attach event handlers to toolbar
-		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", function(event) {_ui.toolbar.event.click(event)});
-		ghostedit.util.addEvent(_ui.el.toolbar, "click", function( e ) { ghostedit.util.preventBubble(e) } );
-		ghostedit.util.addEvent(_ui.el.toolbar, "mousedown", function( e ) { ghostedit.util.preventBubble(e) } );
+		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", function(event) {_ui.toolbar.event.click(event); });
+		ghostedit.util.addEvent(_ui.el.toolbar, "click", function( e ) { ghostedit.util.preventBubble(e); } );
+		ghostedit.util.addEvent(_ui.el.toolbar, "mousedown", function( e ) { ghostedit.util.preventBubble(e); } );
 		
 		// Create and insert status bar
-		var statusbar = document.createElement("div");
+		statusbar = document.createElement("div");
 		statusbar.id = "ghostedit_defaultui_statusbar";
 		statusbar.className = "ghostedit_defaultui_statusbar";
 		statusbar.innerHTML = "<b>Path:</b>";
@@ -280,20 +281,20 @@
 		// Create (initially hidden) modal elements
 		modal = document.createElement("div");
 		modal.id = "ghostedit_defaultui_modal";
-		modal.className = "ghostedit_defaultui_modal"
+		modal.className = "ghostedit_defaultui_modal";
 		ghostedit.wrapdiv.appendChild(modal);
 		_ui.el.modal = modal;
 		
 		modalbg = document.createElement("div");
 		modalbg.id = "ghostedit_defaultui_modalbg";
 		modalbg.className = "ghostedit_defaultui_modalbg";
-		ghostedit.util.addEvent(modalbg, "click", function () { _ui.modal.hide() });
+		ghostedit.util.addEvent(modalbg, "click", function () { _ui.modal.hide(); });
 		ghostedit.wrapdiv.appendChild(modalbg);
 		_ui.el.modalbg = modalbg;
 		
 		// Show textblock tab
 		_ui.toolbar.showtab("textblock");
-	}
+	};
 	
 	_ui.disable = function () {
 		// Remove event listeners
@@ -314,32 +315,22 @@
 		_ui.toolbar.tabs = [];
 		_ui.toolbar.enabledtabs = [];
 		_ui.toolbar.panels = [];
-	}
+	};
 	
 	_ui.update = function () {
-		var elem, aelem = false, i, j, key, styleboxes, node, tagname, classname, pathstring = "", wordcount = "N/A", textcontent, ht;
+		var i, j, node, tagname, classname, pathstring = "", wordcount = "N/A", textcontent, ht;
 		ht = _ui.toolbar.highlightmap;
 		
 		/* Reset ui elements to non highlighted state */
 		for (i = 0; i < ht.length; i++) {
 			ghostedit.util.removeClass(ht[i].element, "current");
 		}
-		
-		/*for (i = 0; i < ht.length; i++) {
-			console.log(i);
-			// ht[i] = array of highlight description objects
-			
-		}*/
-		
-		/*for(i = 0; i < _ui.toolbar.styleboxes.length; i += 1) {
-			ghostedit.util.removeClass(_ui.toolbar.styleboxes[i], "ghostedit_defaultui_stylebox_current");
-		}*/
 	
 		for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
 			node = ghostedit.selection.nodepath[i];
-			tagname = node.tagName.toLowerCase()
+			tagname = node.tagName.toLowerCase();
 			classname = ghostedit.util.trim(node.className);
-			console.log()
+			
 			for (j = 0; j < ht.length; j++) {
 				if (ht[j].test.call(ht[j].data, tagname, classname, node)) {
 					ghostedit.util.addClass(ht[j].element, "current");
@@ -366,7 +357,7 @@
 			wordcount = textcontent.split(/\s+/).length;
 			_ui.el.statusbar.innerHTML += "<div style='position: absolute; right: 10px; top: 3px'>" + wordcount + " words</div>";	
 		}
-	}
+	};
 	
 		
 	_ui.modal = {
@@ -409,45 +400,48 @@
 			"<br />version: " + ghostedit.version);
 			
 		}
-	}
+	};
 	
 	_ui.message = {
 		div: "",
 		show: function (params) {//, bgcolor) {
+			var msg, time, color, msgarea;
 			msg = params.message;
 			time = params.time;
 			color = params.color;
-			//if (typeof bgcolor == "undefined") bgcolor = 'transparent';
-			var msgarea = document.getElementById("ghostedit_defaultui_messagearea");
+			
+			msgarea = _ui.el.messagearea;
 			msgarea.innerHTML = msg;
-			//if (typeof color == "undefined") msgarea.style.color = color;
-			color = color == "success" ? "#bbff00" : color;
-			color = color == "error" ? "#ff4949" : color;
-			color = color == "warn" ? "#ffef49" : color;
+
+			color = (color === "success") ? "#bbff00" : color;
+			color = (color === "error") ? "#ff4949" : color;
+			color = (color === "warn") ? "#ffef49" : color;
 			msgarea.style.backgroundColor = color;
+			
 			msgarea.style.opacity = 1;
 			if (msgarea.filters){ msgarea.filters.item(0).enabled = 1; }
-			if (time != 0) {
+			
+			if (time !== 0) {
 				clearTimeout(_ui.message.timer);
 				_ui.message.timer = setTimeout(function() { _ui.message.clear(); }, time * 1000);
 			}
 		},
 		
 		clear: function () {
-			var msgarea = document.getElementById("ghostedit_defaultui_messagearea");
+			var msgarea = _ui.el.messagearea;
 			if (msgarea.style.opacity > 0.1) {
 				msgarea.style.opacity = msgarea.style.opacity - 0.05;
 				if (msgarea.filters){ msgarea.filters.item(0).Opacity = (msgarea.style.opacity*100); }
-				setTimeout(function(){_ui.message.clear()},20);
+				setTimeout(function() { _ui.message.clear(); }, 20);
 			}
 			else {
 				msgarea.innerHTML = "&nbsp;";
 				msgarea.style.backgroundColor = "transparent";
 				msgarea.opacity = "1";
-				if (msgarea.filters){ msgarea.filters.item(0).Opacity = 100; }
+				if (msgarea.filters) { msgarea.filters.item(0).Opacity = 100; }
 			}
 		}
-	}
+	};
 	
 	_ui.toolbar = {
 		div: "",
@@ -468,7 +462,7 @@
 		},
 		
 		clicktab: function (tab) {
-			var panel, tabname, toolbarelems, i, node;
+			var panel, tabname;
 			if (typeof tab === "string") tab = document.getElementById('ghostedit_defaultui_toolbartab_' + tab.replace('ghostedit_defaultui_toolbartab_',''));
 			tabname = tab.id.replace('ghostedit_defaultui_toolbartab_','');
 			panel = document.getElementById('ghostedit_defaultui_toolbarpanel_' + tabname);
@@ -504,7 +498,7 @@
 		},
 		
 		enabletab: function (tabname) {
-			var tab, panel;
+			var tab;
 			tab = document.getElementById('ghostedit_defaultui_toolbartab_' + tabname);
 			//panel = document.getElementById('ghostedit_defaultui_toolbarpanel_' + tabname);
 			
@@ -513,7 +507,7 @@
 		},
 		
 		disabletab: function (tabname) {
-			var tab, panel;
+			var tab;
 			
 			tab = document.getElementById('ghostedit_defaultui_toolbartab_' + tabname);
 			//panel = document.getElementById('ghostedit_defaultui_toolbarpanel_' + tabname);
@@ -524,7 +518,7 @@
 		
 		insert: {
 			quickbutton: function (def /* {label, icon, action} */) {
-				var _button;
+				var button;
 				if (!def || !def.label || !def.icon || !ghostedit.util.isFunction(def.action)) return false;
 				
 				button = document.createElement("img");
@@ -572,7 +566,7 @@
 				_ui.el.toolbar.appendChild(panel);
 				_ui.toolbar.tabs.push(tab);
 				
-				tab.onclick = function () { _ui.toolbar.clicktab(this) };
+				tab.onclick = function () { _ui.toolbar.clicktab(this); };
 			},
 			
 			
@@ -625,7 +619,7 @@
 			},
 			
 			button: function (panelgroup, def /* {type, label, icon, action, style, highlighttag, highlightclass} */) {
-				var button, highlight;
+				var button;
 				
 				button = document.createElement("img");
 				button.src = ghostedit.options.imageurl + "/defaultui/" + def.icon;
@@ -642,7 +636,7 @@
 			},
 			
 			specialchar: function (panelgroup, def /* character */) {
-				var button, highlight;
+				var button;
 				
 				button = document.createElement("a");
 				button.className = "ghostedit_defaultui_specialchar";
@@ -665,9 +659,9 @@
 				if (def.label) panelgroup.innerHTML += def.label + "<br />";
 				panelgroup.appendChild(input);
 				
-				ghostedit.util.addEvent(input, "click", function (event) { ghostedit.util.preventBubble(event) });
-				ghostedit.util.addEvent(input, "keypress", function (event) { ghostedit.util.preventBubble(event) });
-				ghostedit.util.addEvent(input, "keydown", function (event) { ghostedit.util.preventBubble(event) });
+				ghostedit.util.addEvent(input, "click", function (event) { ghostedit.util.preventBubble(event); });
+				ghostedit.util.addEvent(input, "keypress", function (event) { ghostedit.util.preventBubble(event); });
+				ghostedit.util.addEvent(input, "keydown", function (event) { ghostedit.util.preventBubble(event); });
 				ghostedit.util.addEvent(input, "keyup", def.onkeyup);
 			},
 			
@@ -693,13 +687,13 @@
 				_ui.toolbar.highlightmap.push({
 					element: stylebox,
 					data: { tagname: def.tagname, classname: def.classname !== undefined ? def.classname : ""},
-					test: function (tagname, classname, node) { return tagname === this.tagname && classname === this.classname; }
-				})
+					test: function (tagname, classname/*, node*/) { return tagname === this.tagname && classname === this.classname; }
+				});
 				
-				stylebox.onclick = function () { ghostedit.api.format.setStyle(def.tagname, def.classname) };
+				stylebox.onclick = function () { ghostedit.api.format.setStyle(def.tagname, def.classname); };
 			}	
 		}
-	}
+	};
 	
 	ghostedit.api.plugin.register("defaultui", _ui);
 })();

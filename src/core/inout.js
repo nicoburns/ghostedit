@@ -1,17 +1,18 @@
 (function(window, undefined) {
 	
-	var _inout = {};
+	var _inout = {},
+	ghostedit = window.ghostedit;
 	
 	_inout.init = function () {
 		// Set initial variables
 		_inout.reset();
 		
 		// Add listener to check whether the selection has changed since the last undo save
-		ghostedit.event.addListener("selection:change", function () {ghostedit.history.selectionchanged = true});
+		ghostedit.event.addListener("selection:change", function () { ghostedit.history.selectionchanged = true; });
 		
 		// Export undo and redo function to the api
-		ghostedit.api.importHTML = function (source) { return _inout.importHTML(source); }
-		ghostedit.api.exportHTML = function () { return _inout.exportHTML(); }
+		ghostedit.api.importHTML = function (source) { return _inout.importHTML(source); };
+		ghostedit.api.exportHTML = function () { return _inout.exportHTML(); };
 	};
 	
 	_inout.reset = function () {
@@ -19,31 +20,31 @@
 	};
 	
 	_inout.importHTML = function (sourcenode) {
-		var tagname, handler, domtree, editdiv;
+		var /*tagname, handler, result*/ rootnode;
 		if (!sourcenode || sourcenode.childNodes.length < 1) return false;
 		
-		/*tagname = sourcenode.tagName.toLowerCase();
+		/*var tagname = sourcenode.tagName.toLowerCase();
 		if (handler = _inout.importhandlers[tagname]) {
 			result = ghostedit.plugins[handler].inout.importHTML(insertedelem, elem)
 			if (result) insertedelem = result;
 		}*/
 		
 		// Call container import, and set resulting domnode's contenteditable to true
-		editdiv = ghostedit.plugins.container.inout.importHTML(sourcenode);
-		editdiv.className = "ghostedit_editdiv";
-		editdiv.setAttribute("data-ghostedit-isrootnode", "true");
-		editdiv.contentEditable = 'true';
+		rootnode = ghostedit.plugins.container.inout.importHTML(sourcenode);
+		rootnode.className = "ghostedit_editdiv";
+		rootnode.setAttribute("data-ghostedit-isrootnode", "true");
+		rootnode.contentEditable = 'true';
 		
 		// Trigger 'import:after' event
-		ghostedit.event.trigger("import:after", {"editdiv": editdiv});
+		ghostedit.event.trigger("import:after", {"editdiv": rootnode});
 		
-		// Return editdiv container
-		return editdiv;
+		// Return rootnode container
+		return rootnode;
 	};
 	
 	_inout.exportHTML = function () {
-		var editwrap = ghostedit.editdiv;
-		var i = 0,elem,finalCode,params,handleResult,paracount,snippet, finalexport;
+		var finalexport,
+		editwrap = ghostedit.editdiv;
 		
 		ghostedit.event.trigger("export:before");
 		
@@ -64,8 +65,8 @@
 		window.open(ghostedit.options.previewurl);
 	};
 	
-	_inout.registerimporthandler = function (importhandler/*, elements that can be handled*/) {
-		var i, j, args, tag, list;
+	_inout.registerimporthandler = function (importhandler/*, tagnames of elements that can be handled*/) {
+		var i, args, tag;
 		if (typeof importhandler !== "function") return false;
 		if (arguments.length < 2) return false;
 		args = Array.prototype.slice.call(arguments);
