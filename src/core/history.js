@@ -98,7 +98,7 @@
 		
 		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
 			
-			ghostedit.event.trigger("preundo");
+			ghostedit.event.trigger("history:undo:before");
 
 			// There are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
 			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
@@ -119,8 +119,7 @@
 			_history.undoPoint = undoPoint;
 			_history.undoData = undoData;
 
-			ghostedit.event.trigger("postundo");
-		
+			ghostedit.event.trigger("history:undo:after");
 		}
 	};
 	
@@ -131,7 +130,7 @@
 		
 		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
 			
-			ghostedit.event.trigger("preredo");
+			ghostedit.event.trigger("history:redo:before");
 			
 			// The user has made changes since the last undo/redo, throw away redo data and save undo state
 			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
@@ -145,7 +144,7 @@
 				_history.undoData = undoData;
 			}
 			
-			ghostedit.event.trigger("postredo");
+			ghostedit.event.trigger("history:redo:after");
 		}
 	};
 	

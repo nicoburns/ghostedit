@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-15
+Release Date:      2012-12-16
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -269,8 +269,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		ghostedit.selection.save();
 		
-		ghostedit.event.trigger("postpaste");
-		
 		ghostedit.history.undoData = _paste.savedundodata;
 		ghostedit.history.undoPoint = _paste.savedundopoint;
 		ghostedit.history.saveUndoState();
@@ -279,6 +277,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
+		
+		ghostedit.event.trigger("clipboard:paste:after");
 	};
 	
 	_cut = {
@@ -1405,7 +1405,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
 			
-			ghostedit.event.trigger("preundo");
+			ghostedit.event.trigger("history:undo:before");
 
 			// There are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
 			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
@@ -1426,8 +1426,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			_history.undoPoint = undoPoint;
 			_history.undoData = undoData;
 
-			ghostedit.event.trigger("postundo");
-		
+			ghostedit.event.trigger("history:undo:after");
 		}
 	};
 	
@@ -1438,7 +1437,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
 			
-			ghostedit.event.trigger("preredo");
+			ghostedit.event.trigger("history:redo:before");
 			
 			// The user has made changes since the last undo/redo, throw away redo data and save undo state
 			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
@@ -1452,7 +1451,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				_history.undoData = undoData;
 			}
 			
-			ghostedit.event.trigger("postredo");
+			ghostedit.event.trigger("history:redo:after");
 		}
 	};
 	
@@ -3022,7 +3021,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			ghostedit.api.format.alignText = function (alignDirection) {
 				if (!/left|right|center|justify/.test(alignDirection)) return false;
-				document.getElementById("align" + alignDirection + "Button").className = "current";
 				_textblock.format.formatSelected(_textblock.format.alignText, {"alignDirection": alignDirection});
 			};
 			
@@ -3436,13 +3434,13 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			xhr.onreadystatechange = function () {
 				var responseData;
 				if(xhr.readyState === 4) {
-					if(xhr.status === "200") {
+					if(xhr.status === 200) {
 						responseData = (dataType === "xml") ? xhr.responseXML : xhr.responseText;
-						if(sHandle !== null){ sHandle(true, responseData); }
+						if (sHandle !== null){ sHandle(true, responseData); }
 						return true;
 					}
 					else{
-						if(sHandle !== null){ sHandle(false, responseData); }
+						if (sHandle !== null){ sHandle(false, responseData); }
 						return false;
 					}
 				}
@@ -3506,12 +3504,15 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_image.enable = function () {
 		// Register event listeners
-		ghostedit.event.addListener ("preundo", function () { _image.unfocus(); });
-		ghostedit.event.addListener ("preredo", function () { _image.unfocus(); });
+		ghostedit.event.addListener ("history:undo:before", function () { _image.unfocus(); });
+		ghostedit.event.addListener ("history:redo:before", function () { _image.unfocus(); });
 		//ghostedit.event.addListener ("export:before", function () { _image.unfocus(); });
 		
-		ghostedit.event.addListener ("postundo", function () { _image.applyeventlisteners(); });
-		ghostedit.event.addListener ("postredo", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("history:undo:after", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("history:redo:after", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("clipboard:paste:after", function () { _image.applyeventlisteners(); });
+		
+		
 		
 		ghostedit.event.addListener ("selection:change", function () {
 			if (ghostedit.selection.saved.type !== "image") {
@@ -4197,14 +4198,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				//ghostedit.ui.toolbar.disabletab("image");
 		},
 		
-		srcdialog: function () {
-			if (_image.focusedimage !== false) {
-				//_image.focusedimage.alt = newalt;
-				ghostedit.ui.modal.show("<h3>Change Image Source</h3>" + 
-				"yada yada");
-			}
-		},
-		
 		createbutton: function (imgIdNum, name, html, positionfunc) {
 			var button, elem;
 			
@@ -4294,7 +4287,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		imageurlinput = document.getElementById("ghostedit_imageurlinput");
 		imageurlinput.blur();
 		_image.newImageBefore (null, null, false);
-		ghostedit.ui.modal.hide();
 	};
 	
 	_image.create = function (srcURL) {
@@ -4337,7 +4329,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		var that, addedImage, newImg, parent, handler, result, clearval;
 		ghostedit.history.saveUndoState();
 		if (elem === null) { elem = ghostedit.selection.savedRange.getStartNode(); }
-		elem = ghostedit.textblock.selection.getTextBlockNode ( elem );
+		elem = ghostedit.plugins.textblock.selection.getTextBlockNode ( elem );
 		if (wheretoinsert !== "after") wheretoinsert = "before";
 		
 		if (srcURL === null) { srcURL = document.getElementById("ghostedit_imageurlinput").value; }
@@ -4421,6 +4413,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		var imgs, i, image, focus, dragstart;
 		imgs = ghostedit.editdiv.getElementsByTagName("img");
 		
+		console.log("applyimageevent");
+		
 		focus = function (e) {
 			_image.focus(this,e);
 			return ghostedit.util.cancelAllEvents(e);
@@ -4437,7 +4431,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		for (i = 0; i < imgs.length; i++) {
 			image = imgs[i];
+			console.log(image);
 			if (image.getAttribute("data-ghostedit-elemtype") !== "image") continue;
+			console.log(image);
 			image.onclick = focus;
 			image.ondragstart = dragstart;
 			image.ondraggesture = ghostedit.util.cancelEvent;
@@ -4492,6 +4488,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 		
 	_link.event = {
+		// TODO move to defaultui
 		urlBoxKeypress: function (e) {
 			e = (window.event !== null) ? window.event : e;
 			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
@@ -6246,7 +6243,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					"<hr />" +
 					"<h3>Or enter URL</h3>" +
 					"<input type='text' value='' id='ghostedit_imageurlinput' style='width: 99%' /><br />" +
-					"<input type='button' value='Insert' style='float: right;margin-top: 10px;' onclick='ghostedit.plugins.image.newImageBefore(null, null);ghostedit.ui.modal.hide();' />" +
+					"<input type='button' value='Insert' style='float: right;margin-top: 10px;' onclick='ghostedit.plugins.image.newImageBefore(null, null);ghostedit.plugins.defaultui.modal.hide();' />" +
 					"</form>" +
 					"";
 					

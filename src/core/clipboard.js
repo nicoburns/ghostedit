@@ -235,8 +235,6 @@
 		
 		ghostedit.selection.save();
 		
-		ghostedit.event.trigger("postpaste");
-		
 		ghostedit.history.undoData = _paste.savedundodata;
 		ghostedit.history.undoPoint = _paste.savedundopoint;
 		ghostedit.history.saveUndoState();
@@ -245,6 +243,8 @@
 			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
+		
+		ghostedit.event.trigger("clipboard:paste:after");
 	};
 	
 	_cut = {

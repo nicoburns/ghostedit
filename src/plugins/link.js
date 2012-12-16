@@ -42,6 +42,7 @@
 	};
 		
 	_link.event = {
+		// TODO move to defaultui
 		urlBoxKeypress: function (e) {
 			e = (window.event !== null) ? window.event : e;
 			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;

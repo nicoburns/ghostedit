@@ -11,12 +11,15 @@
 	
 	_image.enable = function () {
 		// Register event listeners
-		ghostedit.event.addListener ("preundo", function () { _image.unfocus(); });
-		ghostedit.event.addListener ("preredo", function () { _image.unfocus(); });
+		ghostedit.event.addListener ("history:undo:before", function () { _image.unfocus(); });
+		ghostedit.event.addListener ("history:redo:before", function () { _image.unfocus(); });
 		//ghostedit.event.addListener ("export:before", function () { _image.unfocus(); });
 		
-		ghostedit.event.addListener ("postundo", function () { _image.applyeventlisteners(); });
-		ghostedit.event.addListener ("postredo", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("history:undo:after", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("history:redo:after", function () { _image.applyeventlisteners(); });
+		ghostedit.event.addListener ("clipboard:paste:after", function () { _image.applyeventlisteners(); });
+		
+		
 		
 		ghostedit.event.addListener ("selection:change", function () {
 			if (ghostedit.selection.saved.type !== "image") {
@@ -917,6 +920,8 @@
 		var imgs, i, image, focus, dragstart;
 		imgs = ghostedit.editdiv.getElementsByTagName("img");
 		
+		console.log("applyimageevent");
+		
 		focus = function (e) {
 			_image.focus(this,e);
 			return ghostedit.util.cancelAllEvents(e);
@@ -933,7 +938,9 @@
 		
 		for (i = 0; i < imgs.length; i++) {
 			image = imgs[i];
+			console.log(image);
 			if (image.getAttribute("data-ghostedit-elemtype") !== "image") continue;
+			console.log(image);
 			image.onclick = focus;
 			image.ondragstart = dragstart;
 			image.ondraggesture = ghostedit.util.cancelEvent;

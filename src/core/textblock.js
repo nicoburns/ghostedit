@@ -1135,7 +1135,6 @@
 			
 			ghostedit.api.format.alignText = function (alignDirection) {
 				if (!/left|right|center|justify/.test(alignDirection)) return false;
-				document.getElementById("align" + alignDirection + "Button").className = "current";
 				_textblock.format.formatSelected(_textblock.format.alignText, {"alignDirection": alignDirection});
 			};
 			
