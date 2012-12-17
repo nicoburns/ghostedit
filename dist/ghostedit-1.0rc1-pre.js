@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-16
+Release Date:      2012-12-17
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -31,7 +31,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	// Add the ghostedit object to the global namespace
 	window.ghostedit = _ghostedit;
 })(window);
-
 (function (window, undefined) {
 	
 	var _clipboard = {}, _paste, _cut,
@@ -274,7 +273,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.history.saveUndoState();
 		
 		if (_paste.triedpasteimage) {
-			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
 		
@@ -1044,7 +1042,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	},
 	ghostedit = window.ghostedit;
 		
-	_event.keydown = function (elem,e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
+	_event.keydown = function (elem, e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
 		var keycode, ghostblock, handler, handled;
 		ghostedit.selection.save(false);
 		
@@ -1562,11 +1560,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
-		
-		// Register UI context event listener 
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			ghostedit.uicontext = params.context;
-		});
 		
 		// Focus editdiv
 		ghostedit.editdiv.focus();
@@ -2217,10 +2210,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				wordstart = _textblock.selection.findwordstart (range.startContainer, range.startOffset);
 				wordend = _textblock.selection.findwordend (range.endContainer, range.endOffset);
 				
-				//If only one end has moved, then it's not from the middle
+				//If only one end has moved (or neither), then it's not from the middle
 				if (onlyfrommiddle) {
-					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return range;
-					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return range;
+					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return lasso().setFromNative(range);
+					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return lasso().setFromNative(range);
 				}
 				
 				range.setStart(wordstart.node, wordstart.offset);
@@ -2228,7 +2221,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			else {
 				range.expand("word");
-				//alert(range.getHTML());
 				if (range.htmlText.split().reverse()[0] === " ") {
 					range.moveEnd("character", -1);
 				}
@@ -2263,7 +2255,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			
@@ -2310,7 +2302,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.className && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			
@@ -3520,19 +3512,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 		});
 		
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			var context = params.context;
-			
-			switch (context) {
-				case "image":
-				case "help":
-				case "save":
-					return;
-			}
-			
-			_image.unfocus();
-		});
-		
 		// Register import capbability
 		ghostedit.inout.registerimporthandler (_image.inout.importHTML, "img");
 		
@@ -4060,15 +4039,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				_image.buttons[i].reposition(img, _image.buttons[i]);
 			}
 			
-			/*ghostedit.selection.saved.type = "image";
-			ghostedit.selection.saved.data = img;
-			ghostedit.selection.updatePathInfo(img);
-			ghostedit.event.trigger("ui:update");*/
+			// Set the ghostedit selection reference to the image
+			_image.focusedimage = img; // Legacy
 			ghostedit.selection.set("image", img);
-			
-			_image.focusedimage = img;
-			
-			ghostedit.event.trigger("ui:newcontext", {context: "image"});
 			
 			if (e) return ghostedit.util.cancelEvent ( e );
 		}
@@ -4192,10 +4165,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					_image.buttons[i].hide();
 				}
 				_image.buttons = [];
-				
-				// Disable image toolbar tab
-				//if (ghostedit.uicontext === "image"){ ghostedit.ui.toolbar.showtab("format"); }
-				//ghostedit.ui.toolbar.disabletab("image");
 		},
 		
 		createbutton: function (imgIdNum, name, html, positionfunc) {
@@ -4471,7 +4440,18 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.api.link = ghostedit.api.link || {};
 		
 		ghostedit.api.link.create = function () {
-			return _link.create();
+			var result;
+			
+			// Save undo state
+			ghostedit.history.saveUndoState();
+			
+			// Run link creation function
+			result = _link.create();
+			
+			// Save undo state
+			ghostedit.history.saveUndoState();
+			
+			return result;
 		};
 		
 		ghostedit.api.link.updateurl = function (url) {
@@ -4487,21 +4467,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		return false;
 	};
 		
-	_link.event = {
-		// TODO move to defaultui
-		urlBoxKeypress: function (e) {
-			e = (window.event !== null) ? window.event : e;
-			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
-			
-			// If enter key is pressed
-			if (keycode === 13) {
-				_link.create();
-				ghostedit.ui.modal.hide();
-				return false;
-			}
-			return true;
-		},
-		
+	_link.event = {		
 		postimport: function (params) {
 			var i, aelems;
 			if (!params || !params.editdiv) return false;
@@ -4512,58 +4478,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				aelems[i].setAttribute("data-ghostedit-handler","link");
 			}
 			return true;
-		},
-		
-		insertButtonClick: function () {
-			var range;
-			if (ghostedit.selection.savedRange.isCollapsed()) {
-				range = ghostedit.selection.savedRange.clone();
-				/*if (!document.createRange && document.selection) {
-					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>")
-					range.selectNodeContents("ghostedit_marker");
-				}*/
-				range = ghostedit.textblock.selection.extendtoword(range, true);
-				range.select();
-				ghostedit.selection.save();
-			}
-			
-			if (ghostedit.selection.savedRange.isCollapsed()) {
-				/*var modalcontent = "<h3>Create link</h3><form>" + 
-				"<label for='ghostedit_urlinput'>Url:</label><input type='text' value='http://' id='ghostedit_urlinput' onkeypress='return _link.event.urlBoxKeypress(event);'/><br />" +
-				"<label for='ghostedit_linktextinput'>Text:</label><input type='text' id='ghostedit_linktextinput' onkeypress='return _link.event.urlBoxKeypress(event);'/>" +
-				"<input type='button' value='Create' style='float: right;margin-top: 10px;' onclick='_link.create();ghostedit.ui.modal.hide();' />" +
-				"</form>";
-				ghostedit.ui.modal.show(modalcontent);
-				document.getElementById('ghostedit_linktextinput').value = ghostedit.selection.savedRange.getText();
-				document.getElementById('ghostedit_urlinput').focus();*/
-				
-				//TODO standards based link insert
-				/*if (document.createRange) {
-					//Create <a> element, range.insertNode()
-				}
-				else */if (document.selection) {
-					//TODO selection is never collapsed
-					ghostedit.selection.savedRange.getNative().pasteHTML("<a id='ghostedit_newlink' href='http://'>Link Text</a>");
-					lasso().selectNodeContents("ghostedit_newlink").select();
-					document.getElementById("ghostedit_newlink").id = "";
-				}
-				//ghostedit.selection.savedRange.pasteText("Link Text", false);
-			}
-			else {
-				_link.create("http://");
-				ghostedit.selection.save();
-				//document.getElementById('ghostedit_toolbar_linkurl').select();
-				
-				/*if (document.getElementById("ghostedit_marker")) {
-					lasso().selectNode("ghostedit_marker").deleteContents().select();
-				}*/
-				_link.focusedlink.href = "http://";
-				ghostedit.ui.toolbar.enabletab("link");
-				ghostedit.ui.toolbar.showtab("link");
-				document.getElementById('ghostedit_toolbar_linkurl').focus();
-				//document.getElementById('ghostedit_toolbar_linkurl').value = Document.getElementById('ghostedit_toolbar_linkurl').value;
-				ghostedit.selection.save();
-			}
 		}
 	};
 	
@@ -4650,20 +4564,66 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_link.create = function (url) {
-		ghostedit.history.saveUndoState();
-		var i, aelems;
-
+		var range, sel, newlink;
 		if (typeof url === "undefined") url = "http://";
-		document.execCommand("CreateLink", false, url);
-
-		aelems = ghostedit.editdiv.getElementsByTagName("a");
-		for (i = 0; i < aelems.length; i += 1) {
-			aelems[i].setAttribute("data-ghostedit-elemtype","link");
-			aelems[i].setAttribute("data-ghostedit-handler","link");
+		
+		// If selection is not a range, return
+		sel = ghostedit.selection.saved;
+		if (sel.type !== "textblock") return false;
+		
+		// If selection is collapsed, extend it to the current word
+		if (sel.data.isCollapsed()) {
+			range = sel.data.clone();
+			range = ghostedit.plugins.textblock.selection.extendtoword(range, true);
+			range.select();
+			ghostedit.selection.save();
+		}
+		
+		// If selection is still collapsed, insert a link with text "Link Text"
+		if (sel.data.isCollapsed()) {
+			// Create new link element
+			newlink = document.createElement("a");
+			newlink.id = "ghostedit_link_newlink";
+			newlink.innerHTML = "Link Text";
+			
+			// Set attributes
+			newlink.href = 'http://';
+			//newlink.setAttribute("data-ghostedit-elemtype", "link");
+			//newlink.setAttribute("data-ghostedit-handler", "link");
+			
+			// Insert link into the document and select it
+			sel.data.insertNode(newlink);
+			sel.data.selectNodeContents("ghostedit_link_newlink").select();
+			document.getElementById("ghostedit_link_newlink").id = "";
+			
+			ghostedit.selection.save();
+			/*if (document.createRange) {
+				//Create <a> element, range.insertNode()
+				
+			}
+			else if (document.selection) {
+				sel.data.getNative().pasteHTML("<a  href='http://'>Link Text</a>");
+				lasso().selectNodeContents("ghostedit_newlink").select();
+				
+			}*/
+			//ghostedit.selection.savedRange.pasteText("Link Text", false);
+		}
+		// If selection is not collapsed, create a link from the selection
+		else {
+			document.execCommand("CreateLink", false, url);
+			
+			lasso().setToSelection().collapseToEnd().select();
+			ghostedit.selection.save();
+			
+			// Set the new link's attributes
+			newlink = ghostedit.plugins.link.focusedlink;
+			//newlink.setAttribute("data-ghostedit-elemtype", "link");
+			//newlink.setAttribute("data-ghostedit-handler", "link");
+			newlink.href = "http://";
 		}
 		
 		ghostedit.selection.save();
-		ghostedit.history.saveUndoState();
+		return true;
 	};
 	
 	_link.focus = function (link) {
@@ -4672,8 +4632,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		// Show the 'remove link' box
 		_link.ui.show(link);
-			
-		ghostedit.event.trigger("ui:newcontext", {context: "link"});
 	};
 	
 	_link.unfocus = function () {
@@ -5828,7 +5786,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					contents: [
 					{type: "group", style: "padding-top: 3px", contents: [
 						{type: "button", id: "insert-link", label: "Insert Link", icon: "insert-link.png",
-							action: function () { ghostedit.api.link.create(); }},
+							action: function () { _ui.toolbar.event.buttonclick.insertlink(); }},
 						{type: "button", id: "insert-image", label: "Insert Image", icon: "insert-image.png",
 								action: function () { _ui.toolbar.event.buttonclick.insertimage(); }}
 					]},
@@ -5977,6 +5935,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				document.getElementById("ghostedit_toolbar_imagealttext").value = img.alt;
 				//document.getElementById("ghostedit_toolbar_imagesrc").value = img.src;
 			}
+			
+			if (_ui.context && !/image|help|save/.test(_ui.context)) {
+				ghostedit.plugins.image.unfocus();
+			}	
 			
 			_ui.toolbar.showtab(params.context);
 		}, "defaultui");
@@ -6275,6 +6237,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					}
 					
 					document.getElementById('ghostedit_imageurlinput').focus();
+				},
+				
+				insertlink: function () {
+					ghostedit.api.link.create();
+					document.getElementById('ghostedit_defaultui_textfield_linkurl').focus();
 				}
 			}
 		},

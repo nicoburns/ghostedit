@@ -8,7 +8,7 @@
 	},
 	ghostedit = window.ghostedit;
 		
-	_event.keydown = function (elem,e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
+	_event.keydown = function (elem, e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
 		var keycode, ghostblock, handler, handled;
 		ghostedit.selection.save(false);
 		

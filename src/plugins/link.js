@@ -25,7 +25,18 @@
 		ghostedit.api.link = ghostedit.api.link || {};
 		
 		ghostedit.api.link.create = function () {
-			return _link.create();
+			var result;
+			
+			// Save undo state
+			ghostedit.history.saveUndoState();
+			
+			// Run link creation function
+			result = _link.create();
+			
+			// Save undo state
+			ghostedit.history.saveUndoState();
+			
+			return result;
 		};
 		
 		ghostedit.api.link.updateurl = function (url) {
@@ -41,21 +52,7 @@
 		return false;
 	};
 		
-	_link.event = {
-		// TODO move to defaultui
-		urlBoxKeypress: function (e) {
-			e = (window.event !== null) ? window.event : e;
-			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
-			
-			// If enter key is pressed
-			if (keycode === 13) {
-				_link.create();
-				ghostedit.ui.modal.hide();
-				return false;
-			}
-			return true;
-		},
-		
+	_link.event = {		
 		postimport: function (params) {
 			var i, aelems;
 			if (!params || !params.editdiv) return false;
@@ -66,58 +63,6 @@
 				aelems[i].setAttribute("data-ghostedit-handler","link");
 			}
 			return true;
-		},
-		
-		insertButtonClick: function () {
-			var range;
-			if (ghostedit.selection.savedRange.isCollapsed()) {
-				range = ghostedit.selection.savedRange.clone();
-				/*if (!document.createRange && document.selection) {
-					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>")
-					range.selectNodeContents("ghostedit_marker");
-				}*/
-				range = ghostedit.textblock.selection.extendtoword(range, true);
-				range.select();
-				ghostedit.selection.save();
-			}
-			
-			if (ghostedit.selection.savedRange.isCollapsed()) {
-				/*var modalcontent = "<h3>Create link</h3><form>" + 
-				"<label for='ghostedit_urlinput'>Url:</label><input type='text' value='http://' id='ghostedit_urlinput' onkeypress='return _link.event.urlBoxKeypress(event);'/><br />" +
-				"<label for='ghostedit_linktextinput'>Text:</label><input type='text' id='ghostedit_linktextinput' onkeypress='return _link.event.urlBoxKeypress(event);'/>" +
-				"<input type='button' value='Create' style='float: right;margin-top: 10px;' onclick='_link.create();ghostedit.ui.modal.hide();' />" +
-				"</form>";
-				ghostedit.ui.modal.show(modalcontent);
-				document.getElementById('ghostedit_linktextinput').value = ghostedit.selection.savedRange.getText();
-				document.getElementById('ghostedit_urlinput').focus();*/
-				
-				//TODO standards based link insert
-				/*if (document.createRange) {
-					//Create <a> element, range.insertNode()
-				}
-				else */if (document.selection) {
-					//TODO selection is never collapsed
-					ghostedit.selection.savedRange.getNative().pasteHTML("<a id='ghostedit_newlink' href='http://'>Link Text</a>");
-					lasso().selectNodeContents("ghostedit_newlink").select();
-					document.getElementById("ghostedit_newlink").id = "";
-				}
-				//ghostedit.selection.savedRange.pasteText("Link Text", false);
-			}
-			else {
-				_link.create("http://");
-				ghostedit.selection.save();
-				//document.getElementById('ghostedit_toolbar_linkurl').select();
-				
-				/*if (document.getElementById("ghostedit_marker")) {
-					lasso().selectNode("ghostedit_marker").deleteContents().select();
-				}*/
-				_link.focusedlink.href = "http://";
-				ghostedit.ui.toolbar.enabletab("link");
-				ghostedit.ui.toolbar.showtab("link");
-				document.getElementById('ghostedit_toolbar_linkurl').focus();
-				//document.getElementById('ghostedit_toolbar_linkurl').value = Document.getElementById('ghostedit_toolbar_linkurl').value;
-				ghostedit.selection.save();
-			}
 		}
 	};
 	
@@ -204,20 +149,66 @@
 	};
 	
 	_link.create = function (url) {
-		ghostedit.history.saveUndoState();
-		var i, aelems;
-
+		var range, sel, newlink;
 		if (typeof url === "undefined") url = "http://";
-		document.execCommand("CreateLink", false, url);
-
-		aelems = ghostedit.editdiv.getElementsByTagName("a");
-		for (i = 0; i < aelems.length; i += 1) {
-			aelems[i].setAttribute("data-ghostedit-elemtype","link");
-			aelems[i].setAttribute("data-ghostedit-handler","link");
+		
+		// If selection is not a range, return
+		sel = ghostedit.selection.saved;
+		if (sel.type !== "textblock") return false;
+		
+		// If selection is collapsed, extend it to the current word
+		if (sel.data.isCollapsed()) {
+			range = sel.data.clone();
+			range = ghostedit.plugins.textblock.selection.extendtoword(range, true);
+			range.select();
+			ghostedit.selection.save();
+		}
+		
+		// If selection is still collapsed, insert a link with text "Link Text"
+		if (sel.data.isCollapsed()) {
+			// Create new link element
+			newlink = document.createElement("a");
+			newlink.id = "ghostedit_link_newlink";
+			newlink.innerHTML = "Link Text";
+			
+			// Set attributes
+			newlink.href = 'http://';
+			//newlink.setAttribute("data-ghostedit-elemtype", "link");
+			//newlink.setAttribute("data-ghostedit-handler", "link");
+			
+			// Insert link into the document and select it
+			sel.data.insertNode(newlink);
+			sel.data.selectNodeContents("ghostedit_link_newlink").select();
+			document.getElementById("ghostedit_link_newlink").id = "";
+			
+			ghostedit.selection.save();
+			/*if (document.createRange) {
+				//Create <a> element, range.insertNode()
+				
+			}
+			else if (document.selection) {
+				sel.data.getNative().pasteHTML("<a  href='http://'>Link Text</a>");
+				lasso().selectNodeContents("ghostedit_newlink").select();
+				
+			}*/
+			//ghostedit.selection.savedRange.pasteText("Link Text", false);
+		}
+		// If selection is not collapsed, create a link from the selection
+		else {
+			document.execCommand("CreateLink", false, url);
+			
+			lasso().setToSelection().collapseToEnd().select();
+			ghostedit.selection.save();
+			
+			// Set the new link's attributes
+			newlink = ghostedit.plugins.link.focusedlink;
+			//newlink.setAttribute("data-ghostedit-elemtype", "link");
+			//newlink.setAttribute("data-ghostedit-handler", "link");
+			newlink.href = "http://";
 		}
 		
 		ghostedit.selection.save();
-		ghostedit.history.saveUndoState();
+		return true;
 	};
 	
 	_link.focus = function (link) {
@@ -226,8 +217,6 @@
 		
 		// Show the 'remove link' box
 		_link.ui.show(link);
-			
-		ghostedit.event.trigger("ui:newcontext", {context: "link"});
 	};
 	
 	_link.unfocus = function () {

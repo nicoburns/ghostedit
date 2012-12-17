@@ -240,7 +240,6 @@
 		ghostedit.history.saveUndoState();
 		
 		if (_paste.triedpasteimage) {
-			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
 		

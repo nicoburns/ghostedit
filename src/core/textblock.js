@@ -331,10 +331,10 @@
 				wordstart = _textblock.selection.findwordstart (range.startContainer, range.startOffset);
 				wordend = _textblock.selection.findwordend (range.endContainer, range.endOffset);
 				
-				//If only one end has moved, then it's not from the middle
+				//If only one end has moved (or neither), then it's not from the middle
 				if (onlyfrommiddle) {
-					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return range;
-					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return range;
+					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return lasso().setFromNative(range);
+					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return lasso().setFromNative(range);
 				}
 				
 				range.setStart(wordstart.node, wordstart.offset);
@@ -342,7 +342,6 @@
 			}
 			else {
 				range.expand("word");
-				//alert(range.getHTML());
 				if (range.htmlText.split().reverse()[0] === " ") {
 					range.moveEnd("character", -1);
 				}
@@ -377,7 +376,7 @@
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			
@@ -424,7 +423,7 @@
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.className && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			

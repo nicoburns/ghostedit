@@ -60,7 +60,7 @@
 					contents: [
 					{type: "group", style: "padding-top: 3px", contents: [
 						{type: "button", id: "insert-link", label: "Insert Link", icon: "insert-link.png",
-							action: function () { ghostedit.api.link.create(); }},
+							action: function () { _ui.toolbar.event.buttonclick.insertlink(); }},
 						{type: "button", id: "insert-image", label: "Insert Image", icon: "insert-image.png",
 								action: function () { _ui.toolbar.event.buttonclick.insertimage(); }}
 					]},
@@ -209,6 +209,10 @@
 				document.getElementById("ghostedit_toolbar_imagealttext").value = img.alt;
 				//document.getElementById("ghostedit_toolbar_imagesrc").value = img.src;
 			}
+			
+			if (_ui.context && !/image|help|save/.test(_ui.context)) {
+				ghostedit.plugins.image.unfocus();
+			}	
 			
 			_ui.toolbar.showtab(params.context);
 		}, "defaultui");
@@ -507,6 +511,11 @@
 					}
 					
 					document.getElementById('ghostedit_imageurlinput').focus();
+				},
+				
+				insertlink: function () {
+					ghostedit.api.link.create();
+					document.getElementById('ghostedit_defaultui_textfield_linkurl').focus();
 				}
 			}
 		},

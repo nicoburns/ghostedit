@@ -27,19 +27,6 @@
 			}
 		});
 		
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			var context = params.context;
-			
-			switch (context) {
-				case "image":
-				case "help":
-				case "save":
-					return;
-			}
-			
-			_image.unfocus();
-		});
-		
 		// Register import capbability
 		ghostedit.inout.registerimporthandler (_image.inout.importHTML, "img");
 		
@@ -567,15 +554,9 @@
 				_image.buttons[i].reposition(img, _image.buttons[i]);
 			}
 			
-			/*ghostedit.selection.saved.type = "image";
-			ghostedit.selection.saved.data = img;
-			ghostedit.selection.updatePathInfo(img);
-			ghostedit.event.trigger("ui:update");*/
+			// Set the ghostedit selection reference to the image
+			_image.focusedimage = img; // Legacy
 			ghostedit.selection.set("image", img);
-			
-			_image.focusedimage = img;
-			
-			ghostedit.event.trigger("ui:newcontext", {context: "image"});
 			
 			if (e) return ghostedit.util.cancelEvent ( e );
 		}
@@ -699,10 +680,6 @@
 					_image.buttons[i].hide();
 				}
 				_image.buttons = [];
-				
-				// Disable image toolbar tab
-				//if (ghostedit.uicontext === "image"){ ghostedit.ui.toolbar.showtab("format"); }
-				//ghostedit.ui.toolbar.disabletab("image");
 		},
 		
 		createbutton: function (imgIdNum, name, html, positionfunc) {

@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-16
+Release Date:      2012-12-17
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -31,7 +31,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	// Add the ghostedit object to the global namespace
 	window.ghostedit = _ghostedit;
 })(window);
-
 (function (window, undefined) {
 	
 	var _clipboard = {}, _paste, _cut,
@@ -274,7 +273,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.history.saveUndoState();
 		
 		if (_paste.triedpasteimage) {
-			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
 		
@@ -1044,7 +1042,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	},
 	ghostedit = window.ghostedit;
 		
-	_event.keydown = function (elem,e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
+	_event.keydown = function (elem, e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
 		var keycode, ghostblock, handler, handled;
 		ghostedit.selection.save(false);
 		
@@ -1562,11 +1560,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
-		
-		// Register UI context event listener 
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			ghostedit.uicontext = params.context;
-		});
 		
 		// Focus editdiv
 		ghostedit.editdiv.focus();
@@ -2217,10 +2210,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				wordstart = _textblock.selection.findwordstart (range.startContainer, range.startOffset);
 				wordend = _textblock.selection.findwordend (range.endContainer, range.endOffset);
 				
-				//If only one end has moved, then it's not from the middle
+				//If only one end has moved (or neither), then it's not from the middle
 				if (onlyfrommiddle) {
-					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return range;
-					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return range;
+					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return lasso().setFromNative(range);
+					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return lasso().setFromNative(range);
 				}
 				
 				range.setStart(wordstart.node, wordstart.offset);
@@ -2228,7 +2221,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			else {
 				range.expand("word");
-				//alert(range.getHTML());
 				if (range.htmlText.split().reverse()[0] === " ") {
 					range.moveEnd("character", -1);
 				}
@@ -2263,7 +2255,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			
@@ -2310,7 +2302,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.className && node.getAttribute("data-ghostedit-elemtype") === "textblock"){
+			if (_textblock.isTextBlock(node)){
 				return {"node": node, "offset": offset};
 			}
 			

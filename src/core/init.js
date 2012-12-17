@@ -104,11 +104,6 @@
 		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
 		
-		// Register UI context event listener 
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			ghostedit.uicontext = params.context;
-		});
-		
 		// Focus editdiv
 		ghostedit.editdiv.focus();
 		ghostedit.plugins.container.focus(ghostedit.editdiv);
