@@ -157,7 +157,7 @@
 			}
 			
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.editdiv.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
+				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
 				dummynode = document.getElementById('ghostedit_dummynode');
 				lasso().selectNodeContents(dummynode).select();*/
 				container.appendChild(ghostedit.textblock.create("p"));

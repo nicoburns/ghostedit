@@ -93,7 +93,7 @@
 		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
 		ghostedit.selection.save();
 		
-		currentDocLen = ghostedit.editdiv.innerHTML.length;
+		currentDocLen = ghostedit.el.rootnode.innerHTML.length;
 		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
 		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
 		
