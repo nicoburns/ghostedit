@@ -14,13 +14,16 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	var _ghostedit = {
 		version: "1.0rc1",
 		enabledplugins: [],
-		uicontext: "",
+		ready: false,
 		active: false,
 		isEditing: true,
 		blockElemId: 0,
 		editorchrome: null,
 		debug: false
 	};
+	
+	// Empty object for references to any elements which need to be globally accesable to be stored on
+	_ghostedit.el = {};
 	
 	// Empty api object for plugins and init functions to add to
 	_ghostedit.api = {};
@@ -54,7 +57,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_paste.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "paste", function(event) { _paste.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "paste", function(event) { _paste.handle(event); });
 		}, "clipboard");
 	};
 	
@@ -66,34 +69,34 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		_paste.savedundopoint = ghostedit.history.undoPoint;
 
 		_paste.triedpasteimage = false;
-		// If webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
+		// If webkit - get data from clipboard, put into rootnode, cleanup, then cancel event
 		if (e.clipboardData && e.clipboardData.getData) {
 			if (/image/.test(e.clipboardData.types)) {
 				_paste.triedpasteimage = true;
 			}
 			
 			if (/text\/html/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/html');
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/html');
 			}
 			else if (/text\/plain/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 			}
 			else {
-				ghostedit.editdiv.innerHTML = "";
+				ghostedit.el.rootnode.innerHTML = "";
 			}
 			_paste.waitfordata();
 			return ghostedit.util.cancelEvent(e);
 		}
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		else {
-			ghostedit.editdiv.innerHTML = "";
+			ghostedit.el.rootnode.innerHTML = "";
 			_paste.waitfordata();
 			return true;
 		}
 	};
 	
 	_paste.waitfordata = function () {
-		var elem = ghostedit.editdiv;
+		var elem = ghostedit.el.rootnode;
 		if (elem.childNodes && elem.childNodes.length > 0) {
 			_paste.process();
 		}
@@ -108,8 +111,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		// Extract pasted content into a new element
 		pastenode = document.createElement("div");
 		console.log("raw paste content");
-		console.log (ghostedit.editdiv.cloneNode(true));
-		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.editdiv);
+		console.log (ghostedit.el.rootnode.cloneNode(true));
+		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.el.rootnode);
 		console.log ("processed content");
 		console.log (pastenode.innerHTML);
 		
@@ -287,7 +290,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_cut.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "cut", function(event) { _cut.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "cut", function(event) { _cut.handle(event); });
 		}, "clipboard");
 	};
 	
@@ -298,7 +301,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		_cut.savedundodata = ghostedit.history.undoData;
 		_cut.savedundopoint = ghostedit.history.undoPoint;
 
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		setTimeout(_cut.cleanup, 20);
 		return true;
 	};
@@ -1276,15 +1279,14 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_event.send = function (eventtype, target, fromdirection, params) {
 		var handler, handled;
 
-		console.log(eventtype + " event");
-		console.log("direction:" + fromdirection);
 		if (!target) return false; // = no previous/next GhostBlock
 
 		handler = target.getAttribute("data-ghostedit-handler");
-		console.log(handler);
-		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].dom || !ghostedit.plugins[handler].dom.deleteevent) return false; // = no handler for this elemtype
+		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].dom || !ghostedit.plugins[handler].dom.deleteevent) {
+			return {"handled": false}; // = no handler for this elemtype
+		}
 		
-		handled = ghostedit.plugins[handler].dom.deleteevent (eventtype, target, fromdirection, params);
+		handled = ghostedit.plugins[handler].dom.deleteevent (target, fromdirection, params);
 
 		return {"handled": handled};
 		
@@ -1318,7 +1320,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_history.saveUndoState = function (force) {
 		var undoPoint, undoData, contentchanged, selectionchanged, currentstate, undostate,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (force !== true) force = false;
 		
@@ -1378,8 +1380,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		if (!undostate || undostate.content.string.length < 1) return false;
 		
 		
-		ghostedit.editdiv.innerHTML = "";//undoData[undopoint].selectioncontent;
-		ghostedit.editdiv.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
+		ghostedit.el.rootnode.innerHTML = "";//undoData[undopoint].selectioncontent;
+		ghostedit.el.rootnode.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
 		
 		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
 		ghostedit.selection.save();
@@ -1388,7 +1390,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_history.undo = function () {
 		var undoPoint = _history.undoPoint,
 		undoData = _history.undoData,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
 			
@@ -1420,7 +1422,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_history.redo = function () {
 		var undoPoint = _history.undoPoint,
 		undoData = _history.undoData,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
 			
@@ -1445,11 +1447,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	window.ghostedit.history = _history;
 })(window);
 (function(window, undefined) {
-	window.ghostedit.init = function (placediv, options) {
-		if (typeof placediv === "string") placediv = document.getElementById(placediv);
+	window.ghostedit.init = function (source, options) {
+		if (typeof source === "string") source = document.getElementById(source);
 		var i, handler,
 		ghostedit = window.ghostedit, 
-		wrapdiv, workspace, uilayer, htmlelem;
+		rootnode, uilayer, htmlelem;
 		
 		// Set up user options
 		ghostedit.options = {};
@@ -1465,32 +1467,16 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.useMozBr = (ghostedit.browserEngine.gecko !== 0 || ghostedit.browserEngine.webkit !== 0 || ghostedit.browserEngine.opera !== 0);
 		
 		//Hide div containing original content
-		placediv.style.display = 'none';
-		ghostedit.sourceelem = placediv;
-		
-		// Create wrapper div that all other GhostEdit elements go in
-		wrapdiv = document.createElement("div");
-		wrapdiv.className = "ghostedit_wrapper";
-		placediv.parentNode.insertBefore(wrapdiv, placediv);
-		ghostedit.wrapdiv = wrapdiv;
-		
-		// Create workspace wrapper (div that contains editdiv and uilayer)
-		workspace = document.createElement("div");
-		workspace.id = "ghostedit_workspace";
-		workspace.className = "ghostedit_workspace";
-		wrapdiv.appendChild(workspace);
-		ghostedit.workspace = workspace;
+		source.style.display = 'none';
+		ghostedit.el.source = source;
 		
 		// Create contextual ui layer
 		uilayer = document.createElement("div");
 		uilayer.id = "ghostedit_uilayer";
 		uilayer.className = "ghostedit_uilayer";
 		uilayer.innerHTML = "<span style='position: absolute; display: none;left: 0; top: 0;line-height: 0'>ie bug fix</span>";
-		workspace.appendChild(uilayer);
-		ghostedit.contextuallayer = uilayer;
-		
-		// If no preview URL specified, then hide the preview button.
-		//if (!options.previewurl) document.getElementById("ghostedit_toolbar_button_preview").style.display = 'none';
+		source.parentNode.insertBefore(uilayer, source);
+		ghostedit.el.uilayer = uilayer;
 		
 		// Run init events for core modules
 		ghostedit.history.init();
@@ -1510,12 +1496,13 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.event.trigger("init");
 		
 		// Import initial content
-		ghostedit.editdiv = ghostedit.inout.importHTML(ghostedit.sourceelem);
-		workspace.appendChild(ghostedit.editdiv);
+		rootnode = ghostedit.inout.importHTML(source);
+		source.parentNode.insertBefore(rootnode, source);
+		ghostedit.el.rootnode = rootnode;
 		
 		// Focus the editor
-		handler = ghostedit.editdiv.getAttribute("data-ghostedit-handler");
-		ghostedit.plugins[handler].focus(ghostedit.editdiv);
+		handler = rootnode.getAttribute("data-ghostedit-handler");
+		ghostedit.plugins[handler].focus(rootnode);
 		
 		// Make sure that FF uses tags not CSS, and doesn't show resize handles on images
 		try{document.execCommand("styleWithCSS", false, false);} catch(err){}//makes FF use tags for contenteditable
@@ -1526,34 +1513,29 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.history.reset();
 		ghostedit.history.saveUndoState();
 		
-		// Attach event handlers to document
+		// Attach event handlers to html element
 		htmlelem = document.getElementsByTagName("html")[0];
-		//ghostedit.util.addEvent(htmlelem, "click", ghostedit.selection.clear);
 		ghostedit.util.addEvent(htmlelem, "dragenter", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "dragleave", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "dragover", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "drop", ghostedit.util.cancelEvent);
 		
-		// Attach handlers to wrapdiv
-		ghostedit.util.addEvent(wrapdiv, "click", function( e ) { ghostedit.util.preventBubble(e); } );
-		//ghostedit.util.addEvent(wrapdiv, "mouseup", function( e ) { ghostedit.util.preventBubble(e) } );
-		//ghostedit.util.addEvent(wrapdiv, "mousedown", function( e ) { ghostedit.util.preventBubble(e) } );
+		// Attach handlers to rootnode
+		ghostedit.util.addEvent(rootnode, "click", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "mouseup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keyup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keydown", function (event) {ghostedit.event.keydown(this, event); });
+		ghostedit.util.addEvent(rootnode, "keypress", function (event) {ghostedit.event.keypress(this, event); });
+		ghostedit.util.addEvent(rootnode, "dragenter", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragleave", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragover", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "drop", ghostedit.util.cancelEvent);
 		
-		// Attach handlers to editdiv
-		ghostedit.util.addEvent(ghostedit.editdiv, "click", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "mouseup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keyup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keydown", function(event) {ghostedit.event.keydown(this, event); });
-		ghostedit.util.addEvent(ghostedit.editdiv, "keypress", function(event) {ghostedit.event.keypress(this, event); });
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragenter", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
+		// Focus rootnode
+		rootnode.focus();
+		ghostedit.plugins.container.focus(rootnode);
 		
-		// Focus editdiv
-		ghostedit.editdiv.focus();
-		ghostedit.plugins.container.focus(ghostedit.editdiv);
-		
+		ghostedit.ready = true;
 		ghostedit.event.trigger("init:after");
 	};
 })(window);
@@ -1590,12 +1572,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		// Call container import, and set resulting domnode's contenteditable to true
 		rootnode = ghostedit.plugins.container.inout.importHTML(sourcenode);
-		rootnode.className = "ghostedit_editdiv";
+		rootnode.className = "ghostedit_rootnode";
 		rootnode.setAttribute("data-ghostedit-isrootnode", "true");
 		rootnode.contentEditable = 'true';
 		
 		// Trigger 'import:after' event
-		ghostedit.event.trigger("import:after", {"editdiv": rootnode});
+		ghostedit.event.trigger("import:after", {"rootnode": rootnode});
 		
 		// Return rootnode container
 		return rootnode;
@@ -1603,7 +1585,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_inout.exportHTML = function () {
 		var finalexport,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		ghostedit.event.trigger("export:before");
 		
@@ -1700,7 +1682,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			else {
 				//Save current selection to range
 				_selection.saved.type = "textblock";
-				_selection.saved.data = sel;//.bookmarkify(ghostedit.editdiv);
+				_selection.saved.data = sel;//.bookmarkify(ghostedit.el.rootnode);
 				
 				// Save to legacy variable
 				_selection.savedRange = _selection.saved.data;
@@ -1844,7 +1826,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				}
 			}
 			
-			// Make sure rootnode/editdiv is also included in path
+			// Make sure rootnode is also included in path
 			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
 					_selection.nodepath.push(elem);
 			}
@@ -1882,7 +1864,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		// Bookmarkify (serialize) the selection, and save the bookmark to the lasso object
 		ghostedit.event.addListener("postsaveundostate", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
-				ghostedit.selection.saved.data.bookmarkify(ghostedit.editdiv);
+				ghostedit.selection.saved.data.bookmarkify(ghostedit.el.rootnode);
 			}
 		});
 		
@@ -2031,7 +2013,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		restore: function (savedrange) {
 			if (!savedrange || !savedrange.unbookmarkify) return false;
-			savedrange.unbookmarkify(ghostedit.editdiv);
+			savedrange.unbookmarkify(ghostedit.el.rootnode);
 			savedrange.select();
 			return true;
 		},
@@ -2654,11 +2636,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.isFirst = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -2669,11 +2651,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.isLast = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = editdiv.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = rootnode.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -2684,11 +2666,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.count = function () {
-		var editdiv, childCount, i;
-		editdiv = ghostedit.editdiv;
+		var rootnode, childCount, i;
+		rootnode = ghostedit.el.rootnode;
 		childCount = 0;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				childCount += 1;
 			}
 		}
@@ -2745,7 +2727,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.remove = function (textblockelem) {
-		var savedElemContent, editdiv, focuselem, i, thisone, textblockelems;
+		var savedElemContent, rootnode, focuselem, i, thisone, textblockelems;
 
 		ghostedit.selection.save();
 		ghostedit.history.saveUndoState();
@@ -2755,8 +2737,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		savedElemContent = textblockelem.innerHTML;
 		
 		// Cycle through textblock elements backwards to select the one before the current one to focus
-		editdiv = ghostedit.editdiv;
-		textblockelems = editdiv.getElementsByTagName("*");
+		rootnode = ghostedit.el.rootnode;
+		textblockelems = rootnode.getElementsByTagName("*");
 		thisone = false;
 		for(i = textblockelems.length - 1; i >= 0; i -= 1) {
 			if (thisone === true && textblockelems[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
@@ -2770,7 +2752,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		// If focuselem is empty, delete it instead (intuitive behaviour)
 		if (_textblock.isEmpty(focuselem)) {
-			editdiv.removeChild(focuselem);
+			rootnode.removeChild(focuselem);
 			
 			lasso().setCaretToStart(textblockelem).select();
 			
@@ -2781,7 +2763,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		
 		// Remove textblock elem
-		editdiv.removeChild(textblockelem);
+		rootnode.removeChild(textblockelem);
 		
 		// Set caret to end of focuselem
 		lasso().setCaretToEnd(focuselem).select();
@@ -3132,7 +3114,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				elem = startpara;
 				doend = false;
 				do {
-					if (elem === ghostedit.editdiv || elem === null) break;
+					if (elem === ghostedit.el.rootnode || elem === null) break;
 					
 					
 					
@@ -3518,7 +3500,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		_image.el.keycapture = textarea;
 		
 		form.appendChild(textarea);
-		ghostedit.wrapdiv.appendChild(form);
+		ghostedit.el.uilayer.appendChild(form);
 		
 		// Export api functions
 		ghostedit.api.image = ghostedit.api.image || {};
@@ -3585,7 +3567,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 		_image.inout = {
 		importHTML: function(source) {
-			var newimg, nw, nh, editorw;
+			var newimg, nw, nh;
 			
 			// Create image element using source image's src				
 			newimg = _image.create(source.src);
@@ -3606,17 +3588,15 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			newimg.setAttribute("data-ghostedit-nativewidth", nw);
 			newimg.setAttribute("data-ghostedit-nativeheight", nh);
 			
-			editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.editdiv.style.paddingLeft.replace("px", "") - ghostedit.editdiv.style.paddingRight.replace("px", "");
-
 			if(!ghostedit.options.image.flexibleimages) {
-				if (source.style.width.replace("px", "") > 0 && source.style.width.replace("px", "") < editorw) {
-					newimg.style.width = source.style.width;
-				}
-				else {
-					newimg.style.width = "200px";
-				}
+				newimg.style.width = source.style.width;
 				newimg.style.height = (newimg.style.width.replace("px", "") / nw) * nh;
+				/*editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.el.rootnode.style.paddingLeft.replace("px", "") - ghostedit.el.rootnode.style.paddingRight.replace("px", "");
+				if (newimg.style.width.replace("px", "") > 0 && newimg.style.width.replace("px", "") < editorw) {
+					newimg.style.width = "200px";
+				*/
 			}
+			
 			newimg.style.cssFloat = source.style.cssFloat;
 			newimg.style.styleFloat = source.style.styleFloat;
 			newimg.style.clear = source.style.clear;
@@ -3841,12 +3821,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			border.style.left = img.offsetLeft + "px";
 			border.style.width = (img.offsetWidth - 6) + "px";
 			border.style.height = (img.offsetHeight - 6) + "px";
-			ghostedit.contextuallayer.appendChild(border);
+			ghostedit.el.uilayer.appendChild(border);
 
 			// Remove existing resize handle
 			existHandle = document.getElementById("ghostedit_image_resizehandle_" + imgIdNum);
 			if (existHandle) {
-				ghostedit.contextuallayer.removeChild(existHandle);
+				ghostedit.el.uilayer.removeChild(existHandle);
 			}
 			
 			//Resize handle
@@ -3865,7 +3845,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 						resizeHandle.style.cursor = "sw-resize";
 						resizeHandle.style.background = "URL(" + ghostedit.options.imageurl + "/image/resize-sw.png)";
 				}
-				ghostedit.contextuallayer.appendChild(resizeHandle);
+				ghostedit.el.uilayer.appendChild(resizeHandle);
 				resizeHandle.style.MozUserSelect = 'none';
 				resizeHandle.contentEditable = false;
 				resizeHandle.unselectable = 'on';
@@ -4096,7 +4076,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					newHeight = (newWidth / nativeImageWidth) * nativeImageHeight;
 				}
 				
-				// If new width is greater than editdiv width then make it the editdiv width
+				// If new width is greater than rootnode width then make it the rootnode width
 				if (newWidth >= img.parentNode.width) {
 					newWidth = img.parentNode.width;
 					newHeight = (newWidth / nativeImageWidth) * nativeImageHeight;
@@ -4134,12 +4114,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				
 				// Remove image border
 				if(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_",""))) {
-					ghostedit.contextuallayer.removeChild(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_","")));
+					ghostedit.el.uilayer.removeChild(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_","")));
 				}
 				
 				// Remove resize handle
 				if(!ghostedit.options.image.disableresize && document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_",""))) {
-					ghostedit.contextuallayer.removeChild(document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_","")));
+					ghostedit.el.uilayer.removeChild(document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_","")));
 				}
 				
 				//Remove image buttons
@@ -4177,7 +4157,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			};
 			
 			button.show = function () {
-				ghostedit.contextuallayer.appendChild(button.elem);
+				ghostedit.el.uilayer.appendChild(button.elem);
 				button.elem.style.MozUserSelect = 'none';
 				button.elem.contentEditable = false;
 				button.elem.unselectable = 'on';
@@ -4362,9 +4342,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_image.applyeventlisteners = function () {
 		var imgs, i, image, focus, dragstart;
-		imgs = ghostedit.editdiv.getElementsByTagName("img");
-		
-		console.log("applyimageevent");
+		imgs = ghostedit.el.rootnode.getElementsByTagName("img");
 		
 		focus = function (e) {
 			_image.focus(this,e);
@@ -4382,9 +4360,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		for (i = 0; i < imgs.length; i++) {
 			image = imgs[i];
-			console.log(image);
 			if (image.getAttribute("data-ghostedit-elemtype") !== "image") continue;
-			console.log(image);
 			image.onclick = focus;
 			image.ondragstart = dragstart;
 			image.ondraggesture = ghostedit.util.cancelEvent;
@@ -4448,9 +4424,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_link.event = {		
 		postimport: function (params) {
 			var i, aelems;
-			if (!params || !params.editdiv) return false;
+			if (!params || !params.rootnode) return false;
 			
-			aelems = params.editdiv.getElementsByTagName("a");
+			aelems = params.rootnode.getElementsByTagName("a");
 			for (i = 0; i < aelems.length; i += 1) {
 				aelems[i].setAttribute("data-ghostedit-elemtype","link");
 				aelems[i].setAttribute("data-ghostedit-handler","link");
@@ -4500,7 +4476,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// Set position of 'remove link' box
 			linkbox.style.top = (link.offsetTop + link.offsetHeight - 1) + "px";
 			left = link.getClientRects()[link.getClientRects().length - 1].left;
-			linkbox.style.left = (left - ghostedit.editdiv.getBoundingClientRect().left) + "px";
+			linkbox.style.left = (left - ghostedit.el.rootnode.getBoundingClientRect().left) + "px";
 			
 			// Create clickable link element, and add it to the 'remove link' box
 			linkboxa = document.createElement("a");
@@ -4510,7 +4486,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			linkbox.appendChild(linkboxa);
 			
 			// Insert 'remove link' box into DOM
-			ghostedit.contextuallayer.appendChild(linkbox);
+			ghostedit.el.uilayer.appendChild(linkbox);
 			
 			// Add event listeners and other properties to 'remove link' box
 			linkbox.style.MozUserSelect = 'none';
@@ -4534,7 +4510,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		hide: function () {
 			if (!_link.el.focusedbox) return;
-			ghostedit.contextuallayer.removeChild(_link.el.focusedbox);
+			ghostedit.el.uilayer.removeChild(_link.el.focusedbox);
 			
 			_link.el.focusedbox = null;
 			_link.el.focusedboxa = null;
@@ -4671,9 +4647,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			var i, uls, ols, lists, list;
 			lists = [];
 			
-			uls = ghostedit.editdiv.getElementsByTagName("ul");
+			uls = ghostedit.el.rootnode.getElementsByTagName("ul");
 			for (i = 0; i < uls.length; i++) { lists.push(uls[i]); }
-			ols = ghostedit.editdiv.getElementsByTagName("ol");
+			ols = ghostedit.el.rootnode.getElementsByTagName("ol");
 			for (i = 0; i < ols.length; i++) { lists.push(ols[i]); }
 			
 			for (i = 0; i < lists.length; i++) {
@@ -5704,6 +5680,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	var _ui = {
 		aelem: false,
 		context: null,
+		enabled: false,
 		elemInEnglish: { "h1": "Heading 1", "h2": "Heading 2", "h3": "Heading 3", "p": "Paragraph", "div": "Generic Box", "a": "Link", "b": "Bold", "strong": "Bold", "i": "Italic", "em": "Italic",
 					"u": "Underline", "img": "Image", "ul": "Bulletted list", "ol": "Numbered list", "li": "List Item", "strike": "Strikethrough"},
 		definition: {
@@ -5862,17 +5839,19 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_ui.el = {};
 	
 	_ui.enable =  function () {
-		
 		// Call UI replace event to signal to other UI's to disable themselves (at their own discretion)
 		ghostedit.event.trigger("ui:replace");
 				
 		// Register event listeners
-		ghostedit.event.addListener("ui:update", function () { _ui.update(); }, "defaultui");
-		ghostedit.event.addListener("ui:message", function (params) { _ui.message.show(params); }, "defaultui");
+		ghostedit.event.addListener("ui:update", function () { if (!ghostedit.ready) return; _ui.update(); }, "defaultui");
+		ghostedit.event.addListener("ui:message", function (params) { if (!ghostedit.ready) return; _ui.message.show(params); }, "defaultui");
 		ghostedit.event.addListener ("ui:replace", function () { ghostedit.api.plugin.disable("defaultui"); }, "defaultui");
 		
 		ghostedit.event.addListener ("selection:change", function () {
-			var node;
+			var i, node;
+			
+			if (!ghostedit.ready) return;
+			
 			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
 				node = ghostedit.selection.nodepath[i];
 				if(node.tagName && node.tagName.toLowerCase() === "img") {
@@ -5899,6 +5878,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		ghostedit.event.addListener ("ui:newcontext", function (params) {
 			if (!params.context) return;
+			if (!ghostedit.ready) return;
+			
 			if (_ui.context && !/textblock|format|insert|save/.test(_ui.context)) {
 				_ui.toolbar.disabletab(_ui.context);
 			}
@@ -5924,9 +5905,60 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		if (!ghostedit.options.defaultui.statusbar) ghostedit.options.defaultui.statusbar = true;
 		if (!ghostedit.options.defaultui.wordcount) ghostedit.options.defaultui.wordcount = true;
 		
+		// Run or register init event
+		if (ghostedit.ready) {
+			_ui.init();
+		}
+		else {
+			_ui.initlistenerid = ghostedit.event.addListener ("init:after", _ui.init, "defaultui");
+		}
+	};
+	
+	_ui.disable = function () {
+		var wrap;
+		wrap = _ui.el.wrap;
+		
+		// Remove event listeners
+		ghostedit.event.removeAllListeners("defaultui");
+		
+		// Move the uilayer and rootnode out of the wrapper
+		wrap.parentNode.insertBefore(ghostedit.el.uilayer, wrap);
+		wrap.parentNode.insertBefore(ghostedit.el.rootnode, wrap);
+		
+		// Remove the wrapper
+		wrap.parentNode.removeChild(wrap);
+		
+		// Reset ui element tracking arrays
+		_ui.toolbar.quickbuttons = [];
+		_ui.toolbar.tabs = [];
+		_ui.toolbar.enabledtabs = [];
+		_ui.toolbar.panels = [];
+	};
+	
+	_ui.init = function () {
+		// Remove init event listener
+		ghostedit.event.removeListener ("init:after", _ui.initlistenerid);
+		
 		// Define tempoary variables for UI creation
-		var def, toolbar, qbanchor, tabselect, messagearea, statusbar,  i, modal, modalbg;
+		var def, rootnode, wrap, workspace, toolbar, qbanchor, tabselect, messagearea, statusbar,  i, modal, modalbg;
 		def = _ui.definition;
+		rootnode = ghostedit.el.rootnode;
+		
+		// Create wrapper div that all other GhostEdit elements go in
+		wrap = document.createElement("div");
+		wrap.className = "ghostedit_defaultui_wrapper";
+		rootnode.parentNode.insertBefore(wrap, rootnode);
+		_ui.el.wrap = wrap;
+		
+		// Create workspace wrapper (div to contain the rootnode and uilayer)
+		workspace = document.createElement("div");
+		workspace.className = "ghostedit_defaultui_workspace";
+		wrap.appendChild(workspace);
+		_ui.el.workspace = workspace;
+		
+		// Move uilayer and rootnode to the wrapper
+		workspace.appendChild(ghostedit.el.uilayer);
+		workspace.appendChild(ghostedit.el.rootnode);
 		
 		// Create toolbar wrapper
 		toolbar = document.createElement("div");
@@ -5969,7 +6001,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		}
 		
 		// Insert toolbar into DOM
-		ghostedit.wrapdiv.insertBefore(toolbar, ghostedit.wrapdiv.firstChild);
+		_ui.el.wrap.insertBefore(toolbar, _ui.el.wrap.firstChild);
 		
 		// Attach event handlers to toolbar
 		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", function(event) {_ui.toolbar.event.click(event); });
@@ -5981,51 +6013,32 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		statusbar.id = "ghostedit_defaultui_statusbar";
 		statusbar.className = "ghostedit_defaultui_statusbar";
 		statusbar.innerHTML = "<b>Path:</b>";
-		ghostedit.wrapdiv.appendChild(statusbar);
+		_ui.el.wrap.appendChild(statusbar);
 		_ui.el.statusbar = statusbar;
 		
 		// Create (initially hidden) modal elements
 		modal = document.createElement("div");
 		modal.id = "ghostedit_defaultui_modal";
 		modal.className = "ghostedit_defaultui_modal";
-		ghostedit.wrapdiv.appendChild(modal);
+		_ui.el.wrap.appendChild(modal);
 		_ui.el.modal = modal;
 		
 		modalbg = document.createElement("div");
 		modalbg.id = "ghostedit_defaultui_modalbg";
 		modalbg.className = "ghostedit_defaultui_modalbg";
 		ghostedit.util.addEvent(modalbg, "click", function () { _ui.modal.hide(); });
-		ghostedit.wrapdiv.appendChild(modalbg);
+		_ui.el.wrap.appendChild(modalbg);
 		_ui.el.modalbg = modalbg;
 		
 		// Show textblock tab
 		_ui.toolbar.showtab("textblock");
 	};
 	
-	_ui.disable = function () {
-		// Remove event listeners
-		ghostedit.event.removeAllListeners("defaultui");
-		
-		// Remove toolbar
-		ghostedit.wrapdiv.removeChild(_ui.el.toolbar);
-		
-		// Remove statusbar
-		ghostedit.wrapdiv.removeChild(_ui.el.statusbar);
-		
-		// Remove modal elements
-		ghostedit.wrapdiv.removeChild(_ui.el.modal);
-		ghostedit.wrapdiv.removeChild(_ui.el.modalbg);
-		
-		// Reset ui element tracking arrays
-		_ui.toolbar.quickbuttons = [];
-		_ui.toolbar.tabs = [];
-		_ui.toolbar.enabledtabs = [];
-		_ui.toolbar.panels = [];
-	};
-	
 	_ui.update = function () {
 		var i, j, node, tagname, classname, pathstring = "", wordcount = "N/A", textcontent, ht;
 		ht = _ui.toolbar.highlightmap;
+		
+		if (!ghostedit.ready) return;
 		
 		/* Reset ui elements to non highlighted state */
 		for (i = 0; i < ht.length; i++) {
@@ -6050,7 +6063,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				document.getElementById("align" + (node.style.textAlign != "" ? node.style.textAlign : "left") + "Button").className = "current";
 			}*/
 			
-			if (i !== ghostedit.selection.nodepath.length - 1) { // Don't include editdiv in path
+			if (i !== ghostedit.selection.nodepath.length - 1) { // Don't include rootnode in path
 				pathstring = " > " + (_ui.elemInEnglish[node.tagName.toLowerCase()] || node.tagName.toUpperCase()) + pathstring;
 			}
 			
@@ -6059,13 +6072,13 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		_ui.el.statusbar.innerHTML = "<b>Path</b>" + pathstring;
 		
 		if (ghostedit.options.defaultui.wordcount) {
-			textcontent = ghostedit.util.trim(ghostedit.editdiv.innerText || ghostedit.editdiv.textContent);
+			textcontent = ghostedit.util.trim(ghostedit.el.rootnode.innerText || ghostedit.el.rootnode.textContent);
 			wordcount = textcontent.split(/\s+/).length;
 			_ui.el.statusbar.innerHTML += "<div style='position: absolute; right: 10px; top: 3px'>" + wordcount + " words</div>";	
 		}
 	};
 	
-		
+	
 	_ui.modal = {
 		show: function (content) {
 			var modal, modalbg, a;

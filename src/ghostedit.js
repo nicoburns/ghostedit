@@ -3,13 +3,16 @@
 	var _ghostedit = {
 		version: "1.0rc1",
 		enabledplugins: [],
-		uicontext: "",
+		ready: false,
 		active: false,
 		isEditing: true,
 		blockElemId: 0,
 		editorchrome: null,
 		debug: false
 	};
+	
+	// Empty object for references to any elements which need to be globally accesable to be stored on
+	_ghostedit.el = {};
 	
 	// Empty api object for plugins and init functions to add to
 	_ghostedit.api = {};

@@ -24,7 +24,7 @@
 	
 	_history.saveUndoState = function (force) {
 		var undoPoint, undoData, contentchanged, selectionchanged, currentstate, undostate,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (force !== true) force = false;
 		
@@ -84,8 +84,8 @@
 		if (!undostate || undostate.content.string.length < 1) return false;
 		
 		
-		ghostedit.editdiv.innerHTML = "";//undoData[undopoint].selectioncontent;
-		ghostedit.editdiv.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
+		ghostedit.el.rootnode.innerHTML = "";//undoData[undopoint].selectioncontent;
+		ghostedit.el.rootnode.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
 		
 		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
 		ghostedit.selection.save();
@@ -94,7 +94,7 @@
 	_history.undo = function () {
 		var undoPoint = _history.undoPoint,
 		undoData = _history.undoData,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
 			
@@ -126,7 +126,7 @@
 	_history.redo = function () {
 		var undoPoint = _history.undoPoint,
 		undoData = _history.undoData,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
 			

@@ -21,7 +21,7 @@
 			else {
 				//Save current selection to range
 				_selection.saved.type = "textblock";
-				_selection.saved.data = sel;//.bookmarkify(ghostedit.editdiv);
+				_selection.saved.data = sel;//.bookmarkify(ghostedit.el.rootnode);
 				
 				// Save to legacy variable
 				_selection.savedRange = _selection.saved.data;
@@ -165,7 +165,7 @@
 				}
 			}
 			
-			// Make sure rootnode/editdiv is also included in path
+			// Make sure rootnode is also included in path
 			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
 					_selection.nodepath.push(elem);
 			}

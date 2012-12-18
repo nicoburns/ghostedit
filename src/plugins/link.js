@@ -51,9 +51,9 @@
 	_link.event = {		
 		postimport: function (params) {
 			var i, aelems;
-			if (!params || !params.editdiv) return false;
+			if (!params || !params.rootnode) return false;
 			
-			aelems = params.editdiv.getElementsByTagName("a");
+			aelems = params.rootnode.getElementsByTagName("a");
 			for (i = 0; i < aelems.length; i += 1) {
 				aelems[i].setAttribute("data-ghostedit-elemtype","link");
 				aelems[i].setAttribute("data-ghostedit-handler","link");
@@ -103,7 +103,7 @@
 			// Set position of 'remove link' box
 			linkbox.style.top = (link.offsetTop + link.offsetHeight - 1) + "px";
 			left = link.getClientRects()[link.getClientRects().length - 1].left;
-			linkbox.style.left = (left - ghostedit.editdiv.getBoundingClientRect().left) + "px";
+			linkbox.style.left = (left - ghostedit.el.rootnode.getBoundingClientRect().left) + "px";
 			
 			// Create clickable link element, and add it to the 'remove link' box
 			linkboxa = document.createElement("a");
@@ -113,7 +113,7 @@
 			linkbox.appendChild(linkboxa);
 			
 			// Insert 'remove link' box into DOM
-			ghostedit.contextuallayer.appendChild(linkbox);
+			ghostedit.el.uilayer.appendChild(linkbox);
 			
 			// Add event listeners and other properties to 'remove link' box
 			linkbox.style.MozUserSelect = 'none';
@@ -137,7 +137,7 @@
 		
 		hide: function () {
 			if (!_link.el.focusedbox) return;
-			ghostedit.contextuallayer.removeChild(_link.el.focusedbox);
+			ghostedit.el.uilayer.removeChild(_link.el.focusedbox);
 			
 			_link.el.focusedbox = null;
 			_link.el.focusedboxa = null;

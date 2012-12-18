@@ -13,9 +13,9 @@
 			var i, uls, ols, lists, list;
 			lists = [];
 			
-			uls = ghostedit.editdiv.getElementsByTagName("ul");
+			uls = ghostedit.el.rootnode.getElementsByTagName("ul");
 			for (i = 0; i < uls.length; i++) { lists.push(uls[i]); }
-			ols = ghostedit.editdiv.getElementsByTagName("ol");
+			ols = ghostedit.el.rootnode.getElementsByTagName("ol");
 			for (i = 0; i < ols.length; i++) { lists.push(ols[i]); }
 			
 			for (i = 0; i < lists.length; i++) {

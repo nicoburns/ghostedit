@@ -1,9 +1,9 @@
 (function(window, undefined) {
-	window.ghostedit.init = function (placediv, options) {
-		if (typeof placediv === "string") placediv = document.getElementById(placediv);
+	window.ghostedit.init = function (source, options) {
+		if (typeof source === "string") source = document.getElementById(source);
 		var i, handler,
 		ghostedit = window.ghostedit, 
-		wrapdiv, workspace, uilayer, htmlelem;
+		rootnode, uilayer, htmlelem;
 		
 		// Set up user options
 		ghostedit.options = {};
@@ -19,32 +19,16 @@
 		ghostedit.useMozBr = (ghostedit.browserEngine.gecko !== 0 || ghostedit.browserEngine.webkit !== 0 || ghostedit.browserEngine.opera !== 0);
 		
 		//Hide div containing original content
-		placediv.style.display = 'none';
-		ghostedit.sourceelem = placediv;
-		
-		// Create wrapper div that all other GhostEdit elements go in
-		wrapdiv = document.createElement("div");
-		wrapdiv.className = "ghostedit_wrapper";
-		placediv.parentNode.insertBefore(wrapdiv, placediv);
-		ghostedit.wrapdiv = wrapdiv;
-		
-		// Create workspace wrapper (div that contains editdiv and uilayer)
-		workspace = document.createElement("div");
-		workspace.id = "ghostedit_workspace";
-		workspace.className = "ghostedit_workspace";
-		wrapdiv.appendChild(workspace);
-		ghostedit.workspace = workspace;
+		source.style.display = 'none';
+		ghostedit.el.source = source;
 		
 		// Create contextual ui layer
 		uilayer = document.createElement("div");
 		uilayer.id = "ghostedit_uilayer";
 		uilayer.className = "ghostedit_uilayer";
 		uilayer.innerHTML = "<span style='position: absolute; display: none;left: 0; top: 0;line-height: 0'>ie bug fix</span>";
-		workspace.appendChild(uilayer);
-		ghostedit.contextuallayer = uilayer;
-		
-		// If no preview URL specified, then hide the preview button.
-		//if (!options.previewurl) document.getElementById("ghostedit_toolbar_button_preview").style.display = 'none';
+		source.parentNode.insertBefore(uilayer, source);
+		ghostedit.el.uilayer = uilayer;
 		
 		// Run init events for core modules
 		ghostedit.history.init();
@@ -64,12 +48,13 @@
 		ghostedit.event.trigger("init");
 		
 		// Import initial content
-		ghostedit.editdiv = ghostedit.inout.importHTML(ghostedit.sourceelem);
-		workspace.appendChild(ghostedit.editdiv);
+		rootnode = ghostedit.inout.importHTML(source);
+		source.parentNode.insertBefore(rootnode, source);
+		ghostedit.el.rootnode = rootnode;
 		
 		// Focus the editor
-		handler = ghostedit.editdiv.getAttribute("data-ghostedit-handler");
-		ghostedit.plugins[handler].focus(ghostedit.editdiv);
+		handler = rootnode.getAttribute("data-ghostedit-handler");
+		ghostedit.plugins[handler].focus(rootnode);
 		
 		// Make sure that FF uses tags not CSS, and doesn't show resize handles on images
 		try{document.execCommand("styleWithCSS", false, false);} catch(err){}//makes FF use tags for contenteditable
@@ -80,34 +65,29 @@
 		ghostedit.history.reset();
 		ghostedit.history.saveUndoState();
 		
-		// Attach event handlers to document
+		// Attach event handlers to html element
 		htmlelem = document.getElementsByTagName("html")[0];
-		//ghostedit.util.addEvent(htmlelem, "click", ghostedit.selection.clear);
 		ghostedit.util.addEvent(htmlelem, "dragenter", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "dragleave", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "dragover", ghostedit.util.cancelEvent);
 		ghostedit.util.addEvent(htmlelem, "drop", ghostedit.util.cancelEvent);
 		
-		// Attach handlers to wrapdiv
-		ghostedit.util.addEvent(wrapdiv, "click", function( e ) { ghostedit.util.preventBubble(e); } );
-		//ghostedit.util.addEvent(wrapdiv, "mouseup", function( e ) { ghostedit.util.preventBubble(e) } );
-		//ghostedit.util.addEvent(wrapdiv, "mousedown", function( e ) { ghostedit.util.preventBubble(e) } );
+		// Attach handlers to rootnode
+		ghostedit.util.addEvent(rootnode, "click", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "mouseup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keyup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keydown", function (event) {ghostedit.event.keydown(this, event); });
+		ghostedit.util.addEvent(rootnode, "keypress", function (event) {ghostedit.event.keypress(this, event); });
+		ghostedit.util.addEvent(rootnode, "dragenter", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragleave", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragover", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "drop", ghostedit.util.cancelEvent);
 		
-		// Attach handlers to editdiv
-		ghostedit.util.addEvent(ghostedit.editdiv, "click", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "mouseup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keyup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keydown", function(event) {ghostedit.event.keydown(this, event); });
-		ghostedit.util.addEvent(ghostedit.editdiv, "keypress", function(event) {ghostedit.event.keypress(this, event); });
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragenter", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
+		// Focus rootnode
+		rootnode.focus();
+		ghostedit.plugins.container.focus(rootnode);
 		
-		// Focus editdiv
-		ghostedit.editdiv.focus();
-		ghostedit.plugins.container.focus(ghostedit.editdiv);
-		
+		ghostedit.ready = true;
 		ghostedit.event.trigger("init:after");
 	};
 })(window);

@@ -14,7 +14,7 @@
 		// Bookmarkify (serialize) the selection, and save the bookmark to the lasso object
 		ghostedit.event.addListener("postsaveundostate", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
-				ghostedit.selection.saved.data.bookmarkify(ghostedit.editdiv);
+				ghostedit.selection.saved.data.bookmarkify(ghostedit.el.rootnode);
 			}
 		});
 		
@@ -163,7 +163,7 @@
 		
 		restore: function (savedrange) {
 			if (!savedrange || !savedrange.unbookmarkify) return false;
-			savedrange.unbookmarkify(ghostedit.editdiv);
+			savedrange.unbookmarkify(ghostedit.el.rootnode);
 			savedrange.select();
 			return true;
 		},
@@ -786,11 +786,11 @@
 	};
 	
 	_textblock.isFirst = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -801,11 +801,11 @@
 	};
 	
 	_textblock.isLast = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = editdiv.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = rootnode.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -816,11 +816,11 @@
 	};
 	
 	_textblock.count = function () {
-		var editdiv, childCount, i;
-		editdiv = ghostedit.editdiv;
+		var rootnode, childCount, i;
+		rootnode = ghostedit.el.rootnode;
 		childCount = 0;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				childCount += 1;
 			}
 		}
@@ -877,7 +877,7 @@
 	};
 	
 	_textblock.remove = function (textblockelem) {
-		var savedElemContent, editdiv, focuselem, i, thisone, textblockelems;
+		var savedElemContent, rootnode, focuselem, i, thisone, textblockelems;
 
 		ghostedit.selection.save();
 		ghostedit.history.saveUndoState();
@@ -887,8 +887,8 @@
 		savedElemContent = textblockelem.innerHTML;
 		
 		// Cycle through textblock elements backwards to select the one before the current one to focus
-		editdiv = ghostedit.editdiv;
-		textblockelems = editdiv.getElementsByTagName("*");
+		rootnode = ghostedit.el.rootnode;
+		textblockelems = rootnode.getElementsByTagName("*");
 		thisone = false;
 		for(i = textblockelems.length - 1; i >= 0; i -= 1) {
 			if (thisone === true && textblockelems[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
@@ -902,7 +902,7 @@
 		
 		// If focuselem is empty, delete it instead (intuitive behaviour)
 		if (_textblock.isEmpty(focuselem)) {
-			editdiv.removeChild(focuselem);
+			rootnode.removeChild(focuselem);
 			
 			lasso().setCaretToStart(textblockelem).select();
 			
@@ -913,7 +913,7 @@
 		
 		
 		// Remove textblock elem
-		editdiv.removeChild(textblockelem);
+		rootnode.removeChild(textblockelem);
 		
 		// Set caret to end of focuselem
 		lasso().setCaretToEnd(focuselem).select();
@@ -1264,7 +1264,7 @@
 				elem = startpara;
 				doend = false;
 				do {
-					if (elem === ghostedit.editdiv || elem === null) break;
+					if (elem === ghostedit.el.rootnode || elem === null) break;
 					
 					
 					

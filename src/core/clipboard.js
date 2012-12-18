@@ -21,7 +21,7 @@
 	
 	_paste.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "paste", function(event) { _paste.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "paste", function(event) { _paste.handle(event); });
 		}, "clipboard");
 	};
 	
@@ -33,34 +33,34 @@
 		_paste.savedundopoint = ghostedit.history.undoPoint;
 
 		_paste.triedpasteimage = false;
-		// If webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
+		// If webkit - get data from clipboard, put into rootnode, cleanup, then cancel event
 		if (e.clipboardData && e.clipboardData.getData) {
 			if (/image/.test(e.clipboardData.types)) {
 				_paste.triedpasteimage = true;
 			}
 			
 			if (/text\/html/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/html');
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/html');
 			}
 			else if (/text\/plain/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 			}
 			else {
-				ghostedit.editdiv.innerHTML = "";
+				ghostedit.el.rootnode.innerHTML = "";
 			}
 			_paste.waitfordata();
 			return ghostedit.util.cancelEvent(e);
 		}
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		else {
-			ghostedit.editdiv.innerHTML = "";
+			ghostedit.el.rootnode.innerHTML = "";
 			_paste.waitfordata();
 			return true;
 		}
 	};
 	
 	_paste.waitfordata = function () {
-		var elem = ghostedit.editdiv;
+		var elem = ghostedit.el.rootnode;
 		if (elem.childNodes && elem.childNodes.length > 0) {
 			_paste.process();
 		}
@@ -75,8 +75,8 @@
 		// Extract pasted content into a new element
 		pastenode = document.createElement("div");
 		console.log("raw paste content");
-		console.log (ghostedit.editdiv.cloneNode(true));
-		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.editdiv);
+		console.log (ghostedit.el.rootnode.cloneNode(true));
+		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.el.rootnode);
 		console.log ("processed content");
 		console.log (pastenode.innerHTML);
 		
@@ -254,7 +254,7 @@
 	
 	_cut.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "cut", function(event) { _cut.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "cut", function(event) { _cut.handle(event); });
 		}, "clipboard");
 	};
 	
@@ -265,7 +265,7 @@
 		_cut.savedundodata = ghostedit.history.undoData;
 		_cut.savedundopoint = ghostedit.history.undoPoint;
 
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		setTimeout(_cut.cleanup, 20);
 		return true;
 	};

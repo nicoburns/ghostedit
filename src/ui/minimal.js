@@ -62,7 +62,7 @@
 		_ui.insertbutton({label: "Redo", icon: "redo16.png", action: function() { ghostedit.api.redo(); } });
 		
 		// Insert toolbar into DOM
-		ghostedit.wrapdiv.insertBefore(toolbar, ghostedit.wrapdiv.firstChild);
+		ghostedit.el.uilayer.parentNode.insertBefore(toolbar, ghostedit.el.uilayer);
 		
 		// Attach event handlers to toolbar
 		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", ghostedit.util.cancelAllEvents);
@@ -75,7 +75,7 @@
 		ghostedit.event.removeAllListeners("minimalui");
 		
 		// Remove toolbar
-		ghostedit.wrapdiv.removeChild(_ui.el.toolbar);
+		_ui.el.toolbar.parentNode.removeChild(_ui.el.toolbar);
 	};
 	
 	_ui.update = function () {

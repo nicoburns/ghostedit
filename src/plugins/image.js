@@ -47,7 +47,7 @@
 		_image.el.keycapture = textarea;
 		
 		form.appendChild(textarea);
-		ghostedit.wrapdiv.appendChild(form);
+		ghostedit.el.uilayer.appendChild(form);
 		
 		// Export api functions
 		ghostedit.api.image = ghostedit.api.image || {};
@@ -114,7 +114,7 @@
 	
 		_image.inout = {
 		importHTML: function(source) {
-			var newimg, nw, nh, editorw;
+			var newimg, nw, nh;
 			
 			// Create image element using source image's src				
 			newimg = _image.create(source.src);
@@ -135,17 +135,15 @@
 			newimg.setAttribute("data-ghostedit-nativewidth", nw);
 			newimg.setAttribute("data-ghostedit-nativeheight", nh);
 			
-			editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.editdiv.style.paddingLeft.replace("px", "") - ghostedit.editdiv.style.paddingRight.replace("px", "");
-
 			if(!ghostedit.options.image.flexibleimages) {
-				if (source.style.width.replace("px", "") > 0 && source.style.width.replace("px", "") < editorw) {
-					newimg.style.width = source.style.width;
-				}
-				else {
-					newimg.style.width = "200px";
-				}
+				newimg.style.width = source.style.width;
 				newimg.style.height = (newimg.style.width.replace("px", "") / nw) * nh;
+				/*editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.el.rootnode.style.paddingLeft.replace("px", "") - ghostedit.el.rootnode.style.paddingRight.replace("px", "");
+				if (newimg.style.width.replace("px", "") > 0 && newimg.style.width.replace("px", "") < editorw) {
+					newimg.style.width = "200px";
+				*/
 			}
+			
 			newimg.style.cssFloat = source.style.cssFloat;
 			newimg.style.styleFloat = source.style.styleFloat;
 			newimg.style.clear = source.style.clear;
@@ -370,12 +368,12 @@
 			border.style.left = img.offsetLeft + "px";
 			border.style.width = (img.offsetWidth - 6) + "px";
 			border.style.height = (img.offsetHeight - 6) + "px";
-			ghostedit.contextuallayer.appendChild(border);
+			ghostedit.el.uilayer.appendChild(border);
 
 			// Remove existing resize handle
 			existHandle = document.getElementById("ghostedit_image_resizehandle_" + imgIdNum);
 			if (existHandle) {
-				ghostedit.contextuallayer.removeChild(existHandle);
+				ghostedit.el.uilayer.removeChild(existHandle);
 			}
 			
 			//Resize handle
@@ -394,7 +392,7 @@
 						resizeHandle.style.cursor = "sw-resize";
 						resizeHandle.style.background = "URL(" + ghostedit.options.imageurl + "/image/resize-sw.png)";
 				}
-				ghostedit.contextuallayer.appendChild(resizeHandle);
+				ghostedit.el.uilayer.appendChild(resizeHandle);
 				resizeHandle.style.MozUserSelect = 'none';
 				resizeHandle.contentEditable = false;
 				resizeHandle.unselectable = 'on';
@@ -625,7 +623,7 @@
 					newHeight = (newWidth / nativeImageWidth) * nativeImageHeight;
 				}
 				
-				// If new width is greater than editdiv width then make it the editdiv width
+				// If new width is greater than rootnode width then make it the rootnode width
 				if (newWidth >= img.parentNode.width) {
 					newWidth = img.parentNode.width;
 					newHeight = (newWidth / nativeImageWidth) * nativeImageHeight;
@@ -663,12 +661,12 @@
 				
 				// Remove image border
 				if(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_",""))) {
-					ghostedit.contextuallayer.removeChild(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_","")));
+					ghostedit.el.uilayer.removeChild(document.getElementById("ghostedit_image_border_" + image.id.replace("ghostedit_image_","")));
 				}
 				
 				// Remove resize handle
 				if(!ghostedit.options.image.disableresize && document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_",""))) {
-					ghostedit.contextuallayer.removeChild(document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_","")));
+					ghostedit.el.uilayer.removeChild(document.getElementById("ghostedit_image_resizehandle_" + image.id.replace("ghostedit_image_","")));
 				}
 				
 				//Remove image buttons
@@ -706,7 +704,7 @@
 			};
 			
 			button.show = function () {
-				ghostedit.contextuallayer.appendChild(button.elem);
+				ghostedit.el.uilayer.appendChild(button.elem);
 				button.elem.style.MozUserSelect = 'none';
 				button.elem.contentEditable = false;
 				button.elem.unselectable = 'on';
@@ -891,9 +889,7 @@
 	
 	_image.applyeventlisteners = function () {
 		var imgs, i, image, focus, dragstart;
-		imgs = ghostedit.editdiv.getElementsByTagName("img");
-		
-		console.log("applyimageevent");
+		imgs = ghostedit.el.rootnode.getElementsByTagName("img");
 		
 		focus = function (e) {
 			_image.focus(this,e);
@@ -911,9 +907,7 @@
 		
 		for (i = 0; i < imgs.length; i++) {
 			image = imgs[i];
-			console.log(image);
 			if (image.getAttribute("data-ghostedit-elemtype") !== "image") continue;
-			console.log(image);
 			image.onclick = focus;
 			image.ondragstart = dragstart;
 			image.ondraggesture = ghostedit.util.cancelEvent;

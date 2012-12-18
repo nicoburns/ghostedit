@@ -2,6 +2,7 @@
 	var _ui = {
 		aelem: false,
 		context: null,
+		enabled: false,
 		elemInEnglish: { "h1": "Heading 1", "h2": "Heading 2", "h3": "Heading 3", "p": "Paragraph", "div": "Generic Box", "a": "Link", "b": "Bold", "strong": "Bold", "i": "Italic", "em": "Italic",
 					"u": "Underline", "img": "Image", "ul": "Bulletted list", "ol": "Numbered list", "li": "List Item", "strike": "Strikethrough"},
 		definition: {
@@ -160,17 +161,19 @@
 	_ui.el = {};
 	
 	_ui.enable =  function () {
-		
 		// Call UI replace event to signal to other UI's to disable themselves (at their own discretion)
 		ghostedit.event.trigger("ui:replace");
 				
 		// Register event listeners
-		ghostedit.event.addListener("ui:update", function () { _ui.update(); }, "defaultui");
-		ghostedit.event.addListener("ui:message", function (params) { _ui.message.show(params); }, "defaultui");
+		ghostedit.event.addListener("ui:update", function () { if (!ghostedit.ready) return; _ui.update(); }, "defaultui");
+		ghostedit.event.addListener("ui:message", function (params) { if (!ghostedit.ready) return; _ui.message.show(params); }, "defaultui");
 		ghostedit.event.addListener ("ui:replace", function () { ghostedit.api.plugin.disable("defaultui"); }, "defaultui");
 		
 		ghostedit.event.addListener ("selection:change", function () {
-			var node;
+			var i, node;
+			
+			if (!ghostedit.ready) return;
+			
 			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
 				node = ghostedit.selection.nodepath[i];
 				if(node.tagName && node.tagName.toLowerCase() === "img") {
@@ -197,6 +200,8 @@
 		
 		ghostedit.event.addListener ("ui:newcontext", function (params) {
 			if (!params.context) return;
+			if (!ghostedit.ready) return;
+			
 			if (_ui.context && !/textblock|format|insert|save/.test(_ui.context)) {
 				_ui.toolbar.disabletab(_ui.context);
 			}
@@ -222,9 +227,60 @@
 		if (!ghostedit.options.defaultui.statusbar) ghostedit.options.defaultui.statusbar = true;
 		if (!ghostedit.options.defaultui.wordcount) ghostedit.options.defaultui.wordcount = true;
 		
+		// Run or register init event
+		if (ghostedit.ready) {
+			_ui.init();
+		}
+		else {
+			_ui.initlistenerid = ghostedit.event.addListener ("init:after", _ui.init, "defaultui");
+		}
+	};
+	
+	_ui.disable = function () {
+		var wrap;
+		wrap = _ui.el.wrap;
+		
+		// Remove event listeners
+		ghostedit.event.removeAllListeners("defaultui");
+		
+		// Move the uilayer and rootnode out of the wrapper
+		wrap.parentNode.insertBefore(ghostedit.el.uilayer, wrap);
+		wrap.parentNode.insertBefore(ghostedit.el.rootnode, wrap);
+		
+		// Remove the wrapper
+		wrap.parentNode.removeChild(wrap);
+		
+		// Reset ui element tracking arrays
+		_ui.toolbar.quickbuttons = [];
+		_ui.toolbar.tabs = [];
+		_ui.toolbar.enabledtabs = [];
+		_ui.toolbar.panels = [];
+	};
+	
+	_ui.init = function () {
+		// Remove init event listener
+		ghostedit.event.removeListener ("init:after", _ui.initlistenerid);
+		
 		// Define tempoary variables for UI creation
-		var def, toolbar, qbanchor, tabselect, messagearea, statusbar,  i, modal, modalbg;
+		var def, rootnode, wrap, workspace, toolbar, qbanchor, tabselect, messagearea, statusbar,  i, modal, modalbg;
 		def = _ui.definition;
+		rootnode = ghostedit.el.rootnode;
+		
+		// Create wrapper div that all other GhostEdit elements go in
+		wrap = document.createElement("div");
+		wrap.className = "ghostedit_defaultui_wrapper";
+		rootnode.parentNode.insertBefore(wrap, rootnode);
+		_ui.el.wrap = wrap;
+		
+		// Create workspace wrapper (div to contain the rootnode and uilayer)
+		workspace = document.createElement("div");
+		workspace.className = "ghostedit_defaultui_workspace";
+		wrap.appendChild(workspace);
+		_ui.el.workspace = workspace;
+		
+		// Move uilayer and rootnode to the wrapper
+		workspace.appendChild(ghostedit.el.uilayer);
+		workspace.appendChild(ghostedit.el.rootnode);
 		
 		// Create toolbar wrapper
 		toolbar = document.createElement("div");
@@ -267,7 +323,7 @@
 		}
 		
 		// Insert toolbar into DOM
-		ghostedit.wrapdiv.insertBefore(toolbar, ghostedit.wrapdiv.firstChild);
+		_ui.el.wrap.insertBefore(toolbar, _ui.el.wrap.firstChild);
 		
 		// Attach event handlers to toolbar
 		ghostedit.util.addEvent(_ui.el.toolbar,"mouseup", function(event) {_ui.toolbar.event.click(event); });
@@ -279,51 +335,32 @@
 		statusbar.id = "ghostedit_defaultui_statusbar";
 		statusbar.className = "ghostedit_defaultui_statusbar";
 		statusbar.innerHTML = "<b>Path:</b>";
-		ghostedit.wrapdiv.appendChild(statusbar);
+		_ui.el.wrap.appendChild(statusbar);
 		_ui.el.statusbar = statusbar;
 		
 		// Create (initially hidden) modal elements
 		modal = document.createElement("div");
 		modal.id = "ghostedit_defaultui_modal";
 		modal.className = "ghostedit_defaultui_modal";
-		ghostedit.wrapdiv.appendChild(modal);
+		_ui.el.wrap.appendChild(modal);
 		_ui.el.modal = modal;
 		
 		modalbg = document.createElement("div");
 		modalbg.id = "ghostedit_defaultui_modalbg";
 		modalbg.className = "ghostedit_defaultui_modalbg";
 		ghostedit.util.addEvent(modalbg, "click", function () { _ui.modal.hide(); });
-		ghostedit.wrapdiv.appendChild(modalbg);
+		_ui.el.wrap.appendChild(modalbg);
 		_ui.el.modalbg = modalbg;
 		
 		// Show textblock tab
 		_ui.toolbar.showtab("textblock");
 	};
 	
-	_ui.disable = function () {
-		// Remove event listeners
-		ghostedit.event.removeAllListeners("defaultui");
-		
-		// Remove toolbar
-		ghostedit.wrapdiv.removeChild(_ui.el.toolbar);
-		
-		// Remove statusbar
-		ghostedit.wrapdiv.removeChild(_ui.el.statusbar);
-		
-		// Remove modal elements
-		ghostedit.wrapdiv.removeChild(_ui.el.modal);
-		ghostedit.wrapdiv.removeChild(_ui.el.modalbg);
-		
-		// Reset ui element tracking arrays
-		_ui.toolbar.quickbuttons = [];
-		_ui.toolbar.tabs = [];
-		_ui.toolbar.enabledtabs = [];
-		_ui.toolbar.panels = [];
-	};
-	
 	_ui.update = function () {
 		var i, j, node, tagname, classname, pathstring = "", wordcount = "N/A", textcontent, ht;
 		ht = _ui.toolbar.highlightmap;
+		
+		if (!ghostedit.ready) return;
 		
 		/* Reset ui elements to non highlighted state */
 		for (i = 0; i < ht.length; i++) {
@@ -348,7 +385,7 @@
 				document.getElementById("align" + (node.style.textAlign != "" ? node.style.textAlign : "left") + "Button").className = "current";
 			}*/
 			
-			if (i !== ghostedit.selection.nodepath.length - 1) { // Don't include editdiv in path
+			if (i !== ghostedit.selection.nodepath.length - 1) { // Don't include rootnode in path
 				pathstring = " > " + (_ui.elemInEnglish[node.tagName.toLowerCase()] || node.tagName.toUpperCase()) + pathstring;
 			}
 			
@@ -357,13 +394,13 @@
 		_ui.el.statusbar.innerHTML = "<b>Path</b>" + pathstring;
 		
 		if (ghostedit.options.defaultui.wordcount) {
-			textcontent = ghostedit.util.trim(ghostedit.editdiv.innerText || ghostedit.editdiv.textContent);
+			textcontent = ghostedit.util.trim(ghostedit.el.rootnode.innerText || ghostedit.el.rootnode.textContent);
 			wordcount = textcontent.split(/\s+/).length;
 			_ui.el.statusbar.innerHTML += "<div style='position: absolute; right: 10px; top: 3px'>" + wordcount + " words</div>";	
 		}
 	};
 	
-		
+	
 	_ui.modal = {
 		show: function (content) {
 			var modal, modalbg, a;

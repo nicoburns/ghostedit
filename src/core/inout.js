@@ -31,12 +31,12 @@
 		
 		// Call container import, and set resulting domnode's contenteditable to true
 		rootnode = ghostedit.plugins.container.inout.importHTML(sourcenode);
-		rootnode.className = "ghostedit_editdiv";
+		rootnode.className = "ghostedit_rootnode";
 		rootnode.setAttribute("data-ghostedit-isrootnode", "true");
 		rootnode.contentEditable = 'true';
 		
 		// Trigger 'import:after' event
-		ghostedit.event.trigger("import:after", {"editdiv": rootnode});
+		ghostedit.event.trigger("import:after", {"rootnode": rootnode});
 		
 		// Return rootnode container
 		return rootnode;
@@ -44,7 +44,7 @@
 	
 	_inout.exportHTML = function () {
 		var finalexport,
-		editwrap = ghostedit.editdiv;
+		editwrap = ghostedit.el.rootnode;
 		
 		ghostedit.event.trigger("export:before");
 		
