@@ -139,7 +139,7 @@
 				//alert(target.id + sourcedirection);
 				if (sourcedirection === "ahead" || sourcedirection === "behind") {
 					newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
-					result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
+					result = ghostedit.plugins.textblock.dom.deleteevent (newtarget, sourcedirection, params);
 				}
 				else if (sourcedirection === "top") {
 					result = ghostedit.event.sendBackwards("delete", target, params);
