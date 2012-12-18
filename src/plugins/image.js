@@ -188,10 +188,6 @@
 		}
 	};
 	
-	_image.ghostevent = function (eventtype/*, target, sourcedirection, params*/) {
-		if (eventtype === "delete") return false;// Don't handle (= passthrough)
-	};
-	
 	_image.move = {
 		align: function (direction, e) {
 			var img;

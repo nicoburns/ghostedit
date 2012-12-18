@@ -31,73 +31,20 @@
 		
 		return true;
 	};
-	
-	_textblock.ghostevent = function (eventtype, target, sourcedirection, params) {
-		switch (eventtype) {
-			case "delete":
-				return _textblock.event.textdelete (target, sourcedirection, params);
-			case "keydown":
-				switch (params.keycode) {
-					case 8: // backspace
-						return _textblock.event.backspace(target, params.event);
-					case 46: //delete
-						return _textblock.event.deletekey (target, params.event);
-				}
-			break;
-			case "keypress":
-				// Enter key
-				if (params.keycode === 13) return _textblock.event.enterkey (target, params.event);
-			break;
-		}
-	};
 		
 	_textblock.event = {
-		textdelete: function (target, sourcedirection, params){
-			var parent, handler, block;
-			switch (sourcedirection) {
-				case "ahead":
-					ghostedit.history.saveUndoState();
-					if (!_textblock.isEmpty(target)) {
-						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
-						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
-							target.innerHTML += params.merge.sourcecontent;
-						}
-						_textblock.mozBrs.tidy(target);
-						params.merge.callback();
-						//params.sourceblock.parentNode.removeChild(params.sourceblock);
-						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
-						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
-						ghostedit.selection.save();
-					}
-					else {
-						parent = ghostedit.dom.getParentGhostBlock(target);
-						handler = parent.getAttribute("data-ghostedit-handler");
-						//alert(target.id);
-						ghostedit.plugins[handler].dom.removechild(parent, target);
-					}
-					ghostedit.history.saveUndoState(true);
-					return true;
-				case "behind":
-					block = ghostedit.selection.getContainingGhostBlock();
-					params =  {
-						"merge": {
-							"contenttype": "inlinehtml",
-							"sourcecontent": target.innerHTML,
-							"callback": ghostedit.util.preparefunction(function (node) {
-										var parent = node.parentNode,
-										handler = parent.getAttribute("data-ghostedit-handler");
-										ghostedit.plugins[handler].dom.removechild(parent, node);
-									}, false, target)
-						}
-					};
-					ghostedit.event.sendBackwards("delete", target, params);
-					//----------------------------------
-					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
-					
-					//ghostedit.event.cancelKeypress = true;
-					//return ghostedit.util.cancelEvent ( e );
-					return true;
+		keydown: function (target, keycode, event) {
+			switch (keycode) {
+				case 8: // backspace
+					return _textblock.event.backspace(target, event);
+				case 46: //delete
+					return _textblock.event.deletekey (target, event);
 			}
+		},
+		
+		keypress: function (target, keycode, event) {
+			// Enter key
+			if (keycode === 13) return _textblock.event.enterkey (target, event);
 		},
 		
 		backspace: function (block, e) {
@@ -155,6 +102,56 @@
 			
 			ghostedit.util.cancelEvent ( e );
 			return true;
+		}
+	};
+	
+	_textblock.dom = {
+		deleteevent: function (target, sourcedirection, params){
+			var parent, handler, block;
+			switch (sourcedirection) {
+				case "ahead":
+					ghostedit.history.saveUndoState();
+					if (!_textblock.isEmpty(target)) {
+						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
+						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
+							target.innerHTML += params.merge.sourcecontent;
+						}
+						_textblock.mozBrs.tidy(target);
+						params.merge.callback();
+						//params.sourceblock.parentNode.removeChild(params.sourceblock);
+						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
+						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
+						ghostedit.selection.save();
+					}
+					else {
+						parent = ghostedit.dom.getParentGhostBlock(target);
+						handler = parent.getAttribute("data-ghostedit-handler");
+						//alert(target.id);
+						ghostedit.plugins[handler].dom.removechild(parent, target);
+					}
+					ghostedit.history.saveUndoState(true);
+					return true;
+				case "behind":
+					block = ghostedit.selection.getContainingGhostBlock();
+					params =  {
+						"merge": {
+							"contenttype": "inlinehtml",
+							"sourcecontent": target.innerHTML,
+							"callback": ghostedit.util.preparefunction(function (node) {
+										var parent = node.parentNode,
+										handler = parent.getAttribute("data-ghostedit-handler");
+										ghostedit.plugins[handler].dom.removechild(parent, node);
+									}, false, target)
+						}
+					};
+					ghostedit.event.sendBackwards("delete", target, params);
+					//----------------------------------
+					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
+					
+					//ghostedit.event.cancelKeypress = true;
+					//return ghostedit.util.cancelEvent ( e );
+					return true;
+			}
 		}
 	};
 	

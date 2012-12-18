@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-17
+Release Date:      2012-12-18
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -329,49 +329,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_container.enable = function () {
 		return true;
 	};
-	
-	_container.ghostevent = function (type, block, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false, childblocks, i;
-		switch (type) {
-			case "deletebehind":
-				childblocks = block.childNodes;
-				for(i = childblocks.length - 1; i >= 0; i -= 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefromahead", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes behind it*/
-			break;
-			case "deleteahead":
-				childblocks = block.childNodes;
-				for(i = 0; i < childblocks.length; i += 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefrombehind", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes ahead of it*/
-			break;
-		}		
-	};
-	
+		
 	_container.dom = {
 	
 		addchild: function (target, wheretoinsert, anchorelem, newElem) {
@@ -398,6 +356,25 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			return true;
 		}
+		
+		// Not currently needed, but comments left for easier future implementation
+		/*deleteevent: function (target, sourcedirection, params) {
+			switch (sourcedirection) {
+				case "ahead":
+					// Backspace was pressed at the start of the element after the container
+				break;
+				case "behind":
+					// Delete was pressed at the end of the element before the container
+				break;
+				case "top":
+					// Backspace was pressed at the start of the first child GhostBlock of the container
+				break;
+				case "bottom":
+					// Delete was pressed at the end of the last child GhostBlock the container
+				break;
+			}
+			return false;
+		}*/
 	};
 		
 	_container.selection = {
@@ -1104,13 +1081,17 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			break;
 		}
 		
-		// Not handled by one of above, pass to plugin keydown handlers
+		// If not handled by one of above, pass to plugin keydown handlers
 		ghostblock = ghostedit.selection.getContainingGhostBlock();
 		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keydown' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keydown", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keydown) {
+				handled = ghostedit.plugins[handler].event.keydown(ghostblock, keycode, event);
+				if (handled === true) break;
+			}
 			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
 			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
 			if (!ghostblock) break;
 		}
@@ -1150,12 +1131,17 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			break;
 		}
 		
+		// If not handled by one of above, pass to plugin keypress handlers
 		ghostblock = ghostedit.selection.getContainingGhostBlock();
 		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keypress' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keypress", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keypress) {
+				handled = ghostedit.plugins[handler].event.keypress(ghostblock, keycode, event);
+				if (handled === true) break;
+			}
 			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
 			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
 			if (!ghostblock) break;
 		}
@@ -1290,12 +1276,15 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	_event.send = function (eventtype, target, fromdirection, params) {
 		var handler, handled;
 
+		console.log(eventtype + " event");
+		console.log("direction:" + fromdirection);
 		if (!target) return false; // = no previous/next GhostBlock
 
 		handler = target.getAttribute("data-ghostedit-handler");
-		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].ghostevent) return false; // = no handler for this elemtype
+		console.log(handler);
+		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].dom || !ghostedit.plugins[handler].dom.deleteevent) return false; // = no handler for this elemtype
 		
-		handled = ghostedit.plugins[handler].ghostevent (eventtype, target, fromdirection, params);
+		handled = ghostedit.plugins[handler].dom.deleteevent (eventtype, target, fromdirection, params);
 
 		return {"handled": handled};
 		
@@ -1910,73 +1899,20 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		return true;
 	};
-	
-	_textblock.ghostevent = function (eventtype, target, sourcedirection, params) {
-		switch (eventtype) {
-			case "delete":
-				return _textblock.event.textdelete (target, sourcedirection, params);
-			case "keydown":
-				switch (params.keycode) {
-					case 8: // backspace
-						return _textblock.event.backspace(target, params.event);
-					case 46: //delete
-						return _textblock.event.deletekey (target, params.event);
-				}
-			break;
-			case "keypress":
-				// Enter key
-				if (params.keycode === 13) return _textblock.event.enterkey (target, params.event);
-			break;
-		}
-	};
 		
 	_textblock.event = {
-		textdelete: function (target, sourcedirection, params){
-			var parent, handler, block;
-			switch (sourcedirection) {
-				case "ahead":
-					ghostedit.history.saveUndoState();
-					if (!_textblock.isEmpty(target)) {
-						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
-						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
-							target.innerHTML += params.merge.sourcecontent;
-						}
-						_textblock.mozBrs.tidy(target);
-						params.merge.callback();
-						//params.sourceblock.parentNode.removeChild(params.sourceblock);
-						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
-						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
-						ghostedit.selection.save();
-					}
-					else {
-						parent = ghostedit.dom.getParentGhostBlock(target);
-						handler = parent.getAttribute("data-ghostedit-handler");
-						//alert(target.id);
-						ghostedit.plugins[handler].dom.removechild(parent, target);
-					}
-					ghostedit.history.saveUndoState(true);
-					return true;
-				case "behind":
-					block = ghostedit.selection.getContainingGhostBlock();
-					params =  {
-						"merge": {
-							"contenttype": "inlinehtml",
-							"sourcecontent": target.innerHTML,
-							"callback": ghostedit.util.preparefunction(function (node) {
-										var parent = node.parentNode,
-										handler = parent.getAttribute("data-ghostedit-handler");
-										ghostedit.plugins[handler].dom.removechild(parent, node);
-									}, false, target)
-						}
-					};
-					ghostedit.event.sendBackwards("delete", target, params);
-					//----------------------------------
-					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
-					
-					//ghostedit.event.cancelKeypress = true;
-					//return ghostedit.util.cancelEvent ( e );
-					return true;
+		keydown: function (target, keycode, event) {
+			switch (keycode) {
+				case 8: // backspace
+					return _textblock.event.backspace(target, event);
+				case 46: //delete
+					return _textblock.event.deletekey (target, event);
 			}
+		},
+		
+		keypress: function (target, keycode, event) {
+			// Enter key
+			if (keycode === 13) return _textblock.event.enterkey (target, event);
 		},
 		
 		backspace: function (block, e) {
@@ -2034,6 +1970,56 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			ghostedit.util.cancelEvent ( e );
 			return true;
+		}
+	};
+	
+	_textblock.dom = {
+		deleteevent: function (target, sourcedirection, params){
+			var parent, handler, block;
+			switch (sourcedirection) {
+				case "ahead":
+					ghostedit.history.saveUndoState();
+					if (!_textblock.isEmpty(target)) {
+						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
+						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
+							target.innerHTML += params.merge.sourcecontent;
+						}
+						_textblock.mozBrs.tidy(target);
+						params.merge.callback();
+						//params.sourceblock.parentNode.removeChild(params.sourceblock);
+						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
+						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
+						ghostedit.selection.save();
+					}
+					else {
+						parent = ghostedit.dom.getParentGhostBlock(target);
+						handler = parent.getAttribute("data-ghostedit-handler");
+						//alert(target.id);
+						ghostedit.plugins[handler].dom.removechild(parent, target);
+					}
+					ghostedit.history.saveUndoState(true);
+					return true;
+				case "behind":
+					block = ghostedit.selection.getContainingGhostBlock();
+					params =  {
+						"merge": {
+							"contenttype": "inlinehtml",
+							"sourcecontent": target.innerHTML,
+							"callback": ghostedit.util.preparefunction(function (node) {
+										var parent = node.parentNode,
+										handler = parent.getAttribute("data-ghostedit-handler");
+										ghostedit.plugins[handler].dom.removechild(parent, node);
+									}, false, target)
+						}
+					};
+					ghostedit.event.sendBackwards("delete", target, params);
+					//----------------------------------
+					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
+					
+					//ghostedit.event.cancelKeypress = true;
+					//return ghostedit.util.cancelEvent ( e );
+					return true;
+			}
 		}
 	};
 	

@@ -36,36 +36,6 @@
 		};
 	};
 	
-	_list.ghostevent = function (eventtype, target, sourcedirection, params) {
-		var newtarget, result, elemtype;
-		if (eventtype === "delete") {
-			elemtype = target.getAttribute("data-ghostedit-elemtype");
-			if (elemtype === "list") {
-				if (sourcedirection === "ahead" || sourcedirection === "behind") {
-					newtarget = (sourcedirection === "ahead") ? ghostedit.dom.getLastChildGhostBlock(target) : ghostedit.dom.getFirstChildGhostBlock(target);
-					return _list.ghostevent("delete", newtarget, sourcedirection, params);
-				}
-				else return false;
-			}
-			else if (elemtype === "listitem") {
-				//alert(target.id + sourcedirection);
-				if (sourcedirection === "ahead" || sourcedirection === "behind") {
-					newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
-					result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
-				}
-				else if (sourcedirection === "top") {
-					result = ghostedit.event.sendBackwards("delete", target, params);
-				}
-				else if (sourcedirection === "bottom") {
-					result = ghostedit.event.sendForwards("delete", target, params);
-				}
-				//alert(target.id + sourcedirection + result);
-				return result;
-			}
-		}
-		
-	};
-	
 	_list.dom = {	
 		addchild: function (target, wheretoinsert, sourceelem, newElem, params) {
 			var parent, listitem, result = false, newelemisempty = false, anchorelem, handler;
@@ -153,6 +123,34 @@
 			target.removeChild(child);
 			
 			return true;
+		},
+		
+		deleteevent: function (target, sourcedirection, params) {
+			var newtarget, result, elemtype;
+			elemtype = target.getAttribute("data-ghostedit-elemtype");
+			if (elemtype === "list") {
+				if (sourcedirection === "ahead" || sourcedirection === "behind") {
+					newtarget = (sourcedirection === "ahead") ? ghostedit.dom.getLastChildGhostBlock(target) : ghostedit.dom.getFirstChildGhostBlock(target);
+					return _list.ghostevent("delete", newtarget, sourcedirection, params);
+				}
+				else return false;
+			}
+			else if (elemtype === "listitem") {
+				//alert(target.id + sourcedirection);
+				if (sourcedirection === "ahead" || sourcedirection === "behind") {
+					newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
+					result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
+				}
+				else if (sourcedirection === "top") {
+					result = ghostedit.event.sendBackwards("delete", target, params);
+				}
+				else if (sourcedirection === "bottom") {
+					result = ghostedit.event.sendForwards("delete", target, params);
+				}
+				//alert(target.id + sourcedirection + result);
+				return result;
+			}
+			
 		}
 	};
 	

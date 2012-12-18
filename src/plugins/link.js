@@ -47,10 +47,6 @@
 			return _link.open();
 		};
 	};
-	
-	_link.ghostevent = function (/*event, target, source, params*/) {
-		return false;
-	};
 		
 	_link.event = {		
 		postimport: function (params) {

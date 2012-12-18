@@ -7,49 +7,7 @@
 	_container.enable = function () {
 		return true;
 	};
-	
-	_container.ghostevent = function (type, block, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false, childblocks, i;
-		switch (type) {
-			case "deletebehind":
-				childblocks = block.childNodes;
-				for(i = childblocks.length - 1; i >= 0; i -= 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefromahead", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes behind it*/
-			break;
-			case "deleteahead":
-				childblocks = block.childNodes;
-				for(i = 0; i < childblocks.length; i += 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefrombehind", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				/*if (!eventhandled) { //Do nothing because container doesn't allow deletes ahead of it*/
-			break;
-		}		
-	};
-	
+		
 	_container.dom = {
 	
 		addchild: function (target, wheretoinsert, anchorelem, newElem) {
@@ -76,6 +34,25 @@
 			
 			return true;
 		}
+		
+		// Not currently needed, but comments left for easier future implementation
+		/*deleteevent: function (target, sourcedirection, params) {
+			switch (sourcedirection) {
+				case "ahead":
+					// Backspace was pressed at the start of the element after the container
+				break;
+				case "behind":
+					// Delete was pressed at the end of the element before the container
+				break;
+				case "top":
+					// Backspace was pressed at the start of the first child GhostBlock of the container
+				break;
+				case "bottom":
+					// Delete was pressed at the end of the last child GhostBlock the container
+				break;
+			}
+			return false;
+		}*/
 	};
 		
 	_container.selection = {

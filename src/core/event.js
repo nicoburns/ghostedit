@@ -70,13 +70,17 @@
 			break;
 		}
 		
-		// Not handled by one of above, pass to plugin keydown handlers
+		// If not handled by one of above, pass to plugin keydown handlers
 		ghostblock = ghostedit.selection.getContainingGhostBlock();
 		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keydown' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keydown", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keydown) {
+				handled = ghostedit.plugins[handler].event.keydown(ghostblock, keycode, event);
+				if (handled === true) break;
+			}
 			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
 			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
 			if (!ghostblock) break;
 		}
@@ -116,12 +120,17 @@
 			break;
 		}
 		
+		// If not handled by one of above, pass to plugin keypress handlers
 		ghostblock = ghostedit.selection.getContainingGhostBlock();
 		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keypress' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keypress", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keypress) {
+				handled = ghostedit.plugins[handler].event.keypress(ghostblock, keycode, event);
+				if (handled === true) break;
+			}
 			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
 			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
 			if (!ghostblock) break;
 		}
@@ -259,9 +268,11 @@
 		if (!target) return false; // = no previous/next GhostBlock
 
 		handler = target.getAttribute("data-ghostedit-handler");
-		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].ghostevent) return false; // = no handler for this elemtype
+		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].dom || !ghostedit.plugins[handler].dom.deleteevent) {
+			return {"handled": false}; // = no handler for this elemtype
+		}
 		
-		handled = ghostedit.plugins[handler].ghostevent (eventtype, target, fromdirection, params);
+		handled = ghostedit.plugins[handler].dom.deleteevent (target, fromdirection, params);
 
 		return {"handled": handled};
 		
