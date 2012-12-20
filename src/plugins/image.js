@@ -586,7 +586,7 @@
 		
 		handle: function (e) {
 			var img, resizeHandle, alignbutton, curMouseX, curMouseY, newWidth, newHeight, origImageWidth, origImageHeight, origMouseX, origMouseY, nativeImageWidth, nativeImageHeight;
-			e = window.event !== null ? window.event : e;
+			e = window.event ? window.event : e;
 			if (_image.focusedimage === null) {
 				_image.unfocus ();
 			}
