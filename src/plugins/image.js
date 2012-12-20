@@ -38,10 +38,11 @@
 		// Add form to capture keystrokes when an image has focus
 		var form = document.createElement("form");
 		form.id = "ghostedit_image_focusform";
-		form.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px";
+		form.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px;position: absolute;left: 0; top: 0";
 		
 		var textarea = document.createElement("textarea");
 		textarea.id = "ghostedit_image_keycapturearea";
+		textarea.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px";
 		textarea.onkeypress = ghostedit.util.cancelEvent;
 		textarea.onkeydown = _image.event.keydown;
 		_image.el.keycapture = textarea;
@@ -137,7 +138,7 @@
 			
 			if(!ghostedit.options.image.flexibleimages) {
 				newimg.style.width = source.style.width;
-				newimg.style.height = (newimg.style.width.replace("px", "") / nw) * nh;
+				newimg.style.height = ((newimg.style.width.replace("px", "") / nw) * nh) + "px";
 				/*editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.el.rootnode.style.paddingLeft.replace("px", "") - ghostedit.el.rootnode.style.paddingRight.replace("px", "");
 				if (newimg.style.width.replace("px", "") > 0 && newimg.style.width.replace("px", "") < editorw) {
 					newimg.style.width = "200px";
@@ -360,6 +361,12 @@
 			
 			imgIdNum = img.id.replace("ghostedit_image_","");
 			
+			// Remove existing border
+			border = document.getElementById("ghostedit_image_border_" + imgIdNum);
+			if (border) {
+				ghostedit.el.uilayer.removeChild(border);
+			}
+			
 			// Add border to image
 			border = document.createElement("div");
 			border.className = "ghostedit_image_border";
@@ -564,7 +571,7 @@
 
 		start: function ( resizeHandle, e ) {
 			ghostedit.history.saveUndoState();
-			if (e === null) { e = window.event; }
+			e = window.event ? window.event : e;
 			var img = document.getElementById("ghostedit_image_" + resizeHandle.id.replace("ghostedit_image_resizehandle_",""));
 			
 			_image.originalMouseX = e.pageX || e.clientX + document.body.scrollLeft;

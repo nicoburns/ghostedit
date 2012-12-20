@@ -1021,15 +1021,16 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		cancelKeypress: false //allows onkeypress event to be cancelled from onkeydown event.
 	},
 	ghostedit = window.ghostedit;
-		
-	_event.keydown = function (elem, e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
+	
+	// Used to capture non-repeating keyboard event (also, non-printing keys don't fire onkeypress in most browsers)
+	_event.keydown = function (elem, e) {
 		var keycode, ghostblock, handler, handled;
 		ghostedit.selection.save(false);
 		
-		e = !(e && e.istest) && window.event !== null ? window.event : e;
+		e = !(e && e.istest) && window.event ? window.event : e;
 		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 		
-		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
+		_event.trigger("input:keydown", {"event": e, "keycode": keycode});
 		
 		// Global shortcuts
 		switch(keycode) {
@@ -1090,7 +1091,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// If plugin for the GhostBlock containing the selection has an 'event.keydown' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
 			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keydown) {
-				handled = ghostedit.plugins[handler].event.keydown(ghostblock, keycode, event);
+				handled = ghostedit.plugins[handler].event.keydown(ghostblock, keycode, e);
 				if (handled === true) break;
 			}
 			
@@ -1103,7 +1104,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		return true;
 	};
 
-	_event.keypress = function (elem,e) {
+	_event.keypress = function (elem, e) {
 		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
 		ghostedit.selection.save();
 		
@@ -1111,10 +1112,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
 		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
 		
-		e = !(e && e.istest) && window.event !== null ? window.event : e;
+		e = !(e && e.istest) && window.event ? window.event : e;
 		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 		
-		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
+		_event.trigger("input:keydown", {"event": e, "keycode": keycode});
 		
 		if (ghostedit.selection.saved.type !== "none" && !ghostedit.selection.savedRange.isCollapsed() && !e.ctrlKey) {
 			ghostedit.selection.deleteContents("collapsetostart");
@@ -1140,7 +1141,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// If plugin for the GhostBlock containing the selection has an 'event.keypress' function, call it
 			handler = ghostblock.getAttribute("data-ghostedit-handler");
 			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keypress) {
-				handled = ghostedit.plugins[handler].event.keypress(ghostblock, keycode, event);
+				handled = ghostedit.plugins[handler].event.keypress(ghostblock, keycode, e);
 				if (handled === true) break;
 			}
 			
@@ -3491,10 +3492,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		// Add form to capture keystrokes when an image has focus
 		var form = document.createElement("form");
 		form.id = "ghostedit_image_focusform";
-		form.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px";
+		form.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px;position: absolute;left: 0; top: 0";
 		
 		var textarea = document.createElement("textarea");
 		textarea.id = "ghostedit_image_keycapturearea";
+		textarea.style.cssText = "margin:0px;padding:0px;height:0px;width:0px;overflow:hidden;line-height: 0px";
 		textarea.onkeypress = ghostedit.util.cancelEvent;
 		textarea.onkeydown = _image.event.keydown;
 		_image.el.keycapture = textarea;
@@ -3590,7 +3592,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			if(!ghostedit.options.image.flexibleimages) {
 				newimg.style.width = source.style.width;
-				newimg.style.height = (newimg.style.width.replace("px", "") / nw) * nh;
+				newimg.style.height = ((newimg.style.width.replace("px", "") / nw) * nh) + "px";
 				/*editorw = ghostedit.wrapdiv.offsetWidth;// - ghostedit.el.rootnode.style.paddingLeft.replace("px", "") - ghostedit.el.rootnode.style.paddingRight.replace("px", "");
 				if (newimg.style.width.replace("px", "") > 0 && newimg.style.width.replace("px", "") < editorw) {
 					newimg.style.width = "200px";
@@ -3813,6 +3815,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			imgIdNum = img.id.replace("ghostedit_image_","");
 			
+			// Remove existing border
+			border = document.getElementById("ghostedit_image_border_" + imgIdNum);
+			if (border) {
+				ghostedit.el.uilayer.removeChild(border);
+			}
+			
 			// Add border to image
 			border = document.createElement("div");
 			border.className = "ghostedit_image_border";
@@ -4017,7 +4025,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 
 		start: function ( resizeHandle, e ) {
 			ghostedit.history.saveUndoState();
-			if (e === null) { e = window.event; }
+			e = window.event ? window.event : e;
 			var img = document.getElementById("ghostedit_image_" + resizeHandle.id.replace("ghostedit_image_resizehandle_",""));
 			
 			_image.originalMouseX = e.pageX || e.clientX + document.body.scrollLeft;
@@ -4039,7 +4047,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		handle: function (e) {
 			var img, resizeHandle, alignbutton, curMouseX, curMouseY, newWidth, newHeight, origImageWidth, origImageHeight, origMouseX, origMouseY, nativeImageWidth, nativeImageHeight;
-			e = window.event !== null ? window.event : e;
+			e = window.event ? window.event : e;
 			if (_image.focusedimage === null) {
 				_image.unfocus ();
 			}
@@ -4480,7 +4488,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			linkbox.className = "ghostedit_focusedlinkbox";
 			linkbox.style.cssText = "position: absolute;text-align: center;font-family: Tahoma, Geneva, sans-serif;" + 
 				"cursor: pointer;font-size: 13px;border: 1px solid #FF028D;background-color: #FF028D;padding: 3px;" + 
-				"z-index: 100";
+				"z-index: 100;width: 92px";
 			linkbox.id = "ghostedit_focusedlinkbox";				
 			
 			// Set position of 'remove link' box
@@ -5807,11 +5815,17 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Name",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("name", this.value); } }
+							onkeyup: function (e) {
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.plugins.save.updateparameter("name", target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Url Slug",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("url", this.value); } }
+							onkeyup: function (e) {
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.plugins.save.updateparameter("url", target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "button", id: "save", label: "Save", icon: "save.png",
@@ -5827,7 +5841,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "linkurl", label: "Link URL", width: "400px",
-							onkeyup: function () { ghostedit.api.link.updateurl(this.value); } }
+							onkeyup: function (e) { 
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.api.link.updateurl(target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "button", label: "Open link in new tab", icon: "openlink.png",
@@ -5838,7 +5855,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "imagealt", label: "Description / Alt text",
-							onkeyup: function () { ghostedit.api.image.updatealttext(this.value); } }
+							onkeyup: function (e) { 
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.api.image.updatealttext(target.value);
+							}}
 					]}
 					]}
 			]

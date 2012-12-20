@@ -100,7 +100,7 @@
 			linkbox.className = "ghostedit_focusedlinkbox";
 			linkbox.style.cssText = "position: absolute;text-align: center;font-family: Tahoma, Geneva, sans-serif;" + 
 				"cursor: pointer;font-size: 13px;border: 1px solid #FF028D;background-color: #FF028D;padding: 3px;" + 
-				"z-index: 100";
+				"z-index: 100;width: 92px";
 			linkbox.id = "ghostedit_focusedlinkbox";				
 			
 			// Set position of 'remove link' box

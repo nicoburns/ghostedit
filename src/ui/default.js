@@ -119,11 +119,17 @@
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Name",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("name", this.value); } }
+							onkeyup: function (e) {
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.plugins.save.updateparameter("name", target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "textfield", label: "Page Url Slug",
-							onkeyup: function () { ghostedit.plugins.save.updateparameter("url", this.value); } }
+							onkeyup: function (e) {
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.plugins.save.updateparameter("url", target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "button", id: "save", label: "Save", icon: "save.png",
@@ -139,7 +145,10 @@
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "linkurl", label: "Link URL", width: "400px",
-							onkeyup: function () { ghostedit.api.link.updateurl(this.value); } }
+							onkeyup: function (e) { 
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.api.link.updateurl(target.value);
+							}}
 					]},
 					{type: "group", contents: [
 						{type: "button", label: "Open link in new tab", icon: "openlink.png",
@@ -150,7 +159,10 @@
 					contents: [
 					{type: "group", contents: [
 						{type: "textfield", id: "imagealt", label: "Description / Alt text",
-							onkeyup: function () { ghostedit.api.image.updatealttext(this.value); } }
+							onkeyup: function (e) { 
+								e = e || window.event;var target = e.target || e.srcElement;
+								ghostedit.api.image.updatealttext(target.value);
+							}}
 					]}
 					]}
 			]

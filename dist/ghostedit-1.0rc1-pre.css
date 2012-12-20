@@ -42,6 +42,7 @@ Feel free to change it using find and replace.
 	max-height: 400px;
 	border: 1px solid #CCC;
 	padding: 0px 10px;
+	position: relative;
 	overflow-x: hidden;
 	overflow-y: auto;
 }
