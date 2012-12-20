@@ -229,8 +229,8 @@
 		var linkcontent;
 		link = link || _link.focusedlink;
 		
-		if(!ghostedit.dom.isGhostBlock(link) || link.tagName.toLowerCase() !== "a") return false;
-		if (ghostedit.selection.saved.type !== "textblock") return false;
+		if (!link.tagName || link.tagName.toLowerCase() !== "a") return false;
+		//if (ghostedit.selection.saved.type !== "textblock") return false;
 		
 		/*var range = lasso().selectNode(link).select();
 		ghostedit.textblock.format.useCommand("unlink");
