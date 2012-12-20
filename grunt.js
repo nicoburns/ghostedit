@@ -24,8 +24,10 @@ module.exports = function(grunt) {
     },
     concat: {
       core: {
-        src: ['<banner:meta.banner>', 
-                'lib/lasso-<% pkg.dependencies.lasso %>.js', 'src/ghostedit.js', 'src/core/*.js'],
+        src: ['<banner:meta.banner>', 'lib/lasso-<%= pkg.dependencies.lasso %>.js', 'src/ghostedit.js',
+                  'src/core/init.js', 'src/core/plugins.js', 'src/core/util.js', 'src/core/event.js',
+                  'src/core/dom.js', 'src/core/selection.js', 'src/core/inout.js', 'src/core/history.js',
+                  'src/core/clipboard.js', 'src/core/textblock.js', 'src/core/container.js'],
         dest: 'dist/custom/<%= pkg.name %>-core-<%= pkg.version %>.js'
       },
       standard: {
