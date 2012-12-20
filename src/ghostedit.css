@@ -1,0 +1,30 @@
+/* CSS file for GhostEdit 1.0-rc1
+Copyright (C) 2010-2012 Nico Burns
+*/
+
+.ghostedit_rootnode {
+	/* Mandatory */
+	position: relative;
+	/* Can be freely edited */
+	outline: none;
+	overflow: hidden;
+	z-index: 100;
+}
+
+.ghostedit_uilayer {
+	position: relative;
+	height: 0px;
+	width: 0px;
+	overflow: visible;
+	z-index: 500;
+}
+
+.ghostedit_rootnode p,
+.ghostedit_rootnode h1,
+.ghostedit_rootnode h2,
+.ghostedit_rootnode h3,
+.ghostedit_rootnode h4,
+.ghostedit_rootnode h5,
+.ghostedit_rootnode h6 {
+	word-wrap: break-word;
+}

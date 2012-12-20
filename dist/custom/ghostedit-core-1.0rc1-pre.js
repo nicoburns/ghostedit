@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-18
+Release Date:      2012-12-20
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -482,7 +482,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.editdiv.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
+				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
 				dummynode = document.getElementById('ghostedit_dummynode');
 				lasso().selectNodeContents(dummynode).select();*/
 				container.appendChild(ghostedit.textblock.create("p"));
@@ -1107,7 +1107,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
 		ghostedit.selection.save();
 		
-		currentDocLen = ghostedit.editdiv.innerHTML.length;
+		currentDocLen = ghostedit.el.rootnode.innerHTML.length;
 		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
 		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
 		

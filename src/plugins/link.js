@@ -98,6 +98,9 @@
 			// Create 'remove link' box
 			linkbox = document.createElement("span");
 			linkbox.className = "ghostedit_focusedlinkbox";
+			linkbox.style.cssText = "position: absolute;text-align: center;font-family: Tahoma, Geneva, sans-serif;" + 
+				"cursor: pointer;font-size: 13px;border: 1px solid #FF028D;background-color: #FF028D;padding: 3px;" + 
+				"z-index: 100";
 			linkbox.id = "ghostedit_focusedlinkbox";				
 			
 			// Set position of 'remove link' box
@@ -108,7 +111,7 @@
 			// Create clickable link element, and add it to the 'remove link' box
 			linkboxa = document.createElement("a");
 			linkboxa.style.cursor = "pointer";
-			linkboxa.style.color = "#333";
+			linkboxa.style.color = "#000";
 			linkboxa.innerHTML = "<b>&#215;</b>&nbsp;remove&nbsp;link</a>";
 			linkbox.appendChild(linkboxa);
 			

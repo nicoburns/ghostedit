@@ -363,6 +363,8 @@
 			// Add border to image
 			border = document.createElement("div");
 			border.className = "ghostedit_image_border";
+			border.style.cssText = "position: absolute;line-height: 1px;font-size: 1px;background-color: transparent;" +
+				"border: 3px solid #333;z-index: 100";
 			border.id = "ghostedit_image_border_" + imgIdNum;
 			border.style.top = img.offsetTop + "px";
 			border.style.left = img.offsetLeft + "px";
@@ -380,6 +382,8 @@
 			if(!ghostedit.options.image.disableresize) {
 				resizeHandle = document.createElement("span");
 				resizeHandle.className = "ghostedit_image_resizehandle";
+				resizeHandle.style.cssText = "position: absolute;width: 13px;height: 13px;line-height: 9px;" +
+					"font-size: 9px;background-color: transparent;z-index: 200";
 				resizeHandle.id = "ghostedit_image_resizehandle_" + imgIdNum;
 				resizeHandle.style.top = (img.offsetTop + img.offsetHeight - 13) + "px";
 				if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
@@ -685,6 +689,9 @@
 			elem.setAttribute("data-ghostedit-elemtype","ghostedit_imagebutton");
 			elem.setAttribute("data-ghostedit-handler","image");
 			elem.className = "ghostedit_imagebutton";
+			elem.style.cssText = "position: absolute;width: 30px;height: 26px;_height: 30px;color: #FFF;font-size: 16px;" +
+				"padding-top: 4px;font-family: Tahoma, sans-serif;text-align: center;vertical-align: middle;" +
+				"font-weight: bold;background-color: #FF028D;cursor: pointer !important;z-index: 200";
 			elem.innerHTML = html;//"&#215;";//"<img src='/static/images/x.png' style='vertical-align: middle' />";
 			
 			// Create button object

@@ -31,6 +31,10 @@ module.exports = function(grunt) {
       standard: {
         src: ['<config:concat.core.dest>', 'src/plugins/*.js', 'src/ui/default.js', 'src/ui/standard.js'],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
+      },
+      css: {
+        src: ['src/ghostedit.css', 'src/ui/default.css'],
+        dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.css'
       }
     },
     min: {

@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-18
+Release Date:      2012-12-20
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -482,7 +482,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.editdiv.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
+				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
 				dummynode = document.getElementById('ghostedit_dummynode');
 				lasso().selectNodeContents(dummynode).select();*/
 				container.appendChild(ghostedit.textblock.create("p"));
@@ -1107,7 +1107,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
 		ghostedit.selection.save();
 		
-		currentDocLen = ghostedit.editdiv.innerHTML.length;
+		currentDocLen = ghostedit.el.rootnode.innerHTML.length;
 		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
 		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
 		
@@ -3816,6 +3816,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// Add border to image
 			border = document.createElement("div");
 			border.className = "ghostedit_image_border";
+			border.style.cssText = "position: absolute;line-height: 1px;font-size: 1px;background-color: transparent;" +
+				"border: 3px solid #333;z-index: 100";
 			border.id = "ghostedit_image_border_" + imgIdNum;
 			border.style.top = img.offsetTop + "px";
 			border.style.left = img.offsetLeft + "px";
@@ -3833,6 +3835,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			if(!ghostedit.options.image.disableresize) {
 				resizeHandle = document.createElement("span");
 				resizeHandle.className = "ghostedit_image_resizehandle";
+				resizeHandle.style.cssText = "position: absolute;width: 13px;height: 13px;line-height: 9px;" +
+					"font-size: 9px;background-color: transparent;z-index: 200";
 				resizeHandle.id = "ghostedit_image_resizehandle_" + imgIdNum;
 				resizeHandle.style.top = (img.offsetTop + img.offsetHeight - 13) + "px";
 				if (img.style.cssFloat === "left" || img.style.styleFloat === "left") {
@@ -4138,6 +4142,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			elem.setAttribute("data-ghostedit-elemtype","ghostedit_imagebutton");
 			elem.setAttribute("data-ghostedit-handler","image");
 			elem.className = "ghostedit_imagebutton";
+			elem.style.cssText = "position: absolute;width: 30px;height: 26px;_height: 30px;color: #FFF;font-size: 16px;" +
+				"padding-top: 4px;font-family: Tahoma, sans-serif;text-align: center;vertical-align: middle;" +
+				"font-weight: bold;background-color: #FF028D;cursor: pointer !important;z-index: 200";
 			elem.innerHTML = html;//"&#215;";//"<img src='/static/images/x.png' style='vertical-align: middle' />";
 			
 			// Create button object
@@ -4471,6 +4478,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// Create 'remove link' box
 			linkbox = document.createElement("span");
 			linkbox.className = "ghostedit_focusedlinkbox";
+			linkbox.style.cssText = "position: absolute;text-align: center;font-family: Tahoma, Geneva, sans-serif;" + 
+				"cursor: pointer;font-size: 13px;border: 1px solid #FF028D;background-color: #FF028D;padding: 3px;" + 
+				"z-index: 100";
 			linkbox.id = "ghostedit_focusedlinkbox";				
 			
 			// Set position of 'remove link' box
@@ -4481,7 +4491,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// Create clickable link element, and add it to the 'remove link' box
 			linkboxa = document.createElement("a");
 			linkboxa.style.cursor = "pointer";
-			linkboxa.style.color = "#333";
+			linkboxa.style.color = "#000";
 			linkboxa.innerHTML = "<b>&#215;</b>&nbsp;remove&nbsp;link</a>";
 			linkbox.appendChild(linkboxa);
 			
@@ -4773,7 +4783,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				//alert(target.id + sourcedirection);
 				if (sourcedirection === "ahead" || sourcedirection === "behind") {
 					newtarget = ghostedit.dom.getFirstChildGhostBlock(target);
-					result = ghostedit.plugins.textblock.event.textdelete (newtarget, sourcedirection, params);
+					result = ghostedit.plugins.textblock.dom.deleteevent (newtarget, sourcedirection, params);
 				}
 				else if (sourcedirection === "top") {
 					result = ghostedit.event.sendBackwards("delete", target, params);
