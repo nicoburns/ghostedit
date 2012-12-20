@@ -92,7 +92,7 @@
 			ghostedit.history.saveUndoState();
 			
 			if (e.shiftKey) {
-				_textblock.format.insert.br();
+				_textblock.insert.br();
 				_textblock.mozBrs.tidy (elem);
 			}
 			else {
