@@ -42,7 +42,7 @@
 			if (/text\/html/.test(e.clipboardData.types)) {
 				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/html');
 			}
-			else if (/text\/plain/.test(e.clipboardData.types)) {
+			else if (/text\/plain/.test(e.clipboardData.types) || ghostedit.browserEngine.opera) {
 				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 			}
 			else {
