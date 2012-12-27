@@ -1,7 +1,7 @@
 {
   "name": "ghostedit",
   "title": "GhostEdit WYSIWYG editor",
-  "version": "1.0rc1-pre",
+  "version": "1.0rc1",
   "homepage": "http://ghosted.it",
   "author": {
     "name": "Nico Burns",

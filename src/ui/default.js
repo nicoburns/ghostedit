@@ -239,6 +239,13 @@
 		if (!ghostedit.options.defaultui.statusbar) ghostedit.options.defaultui.statusbar = true;
 		if (!ghostedit.options.defaultui.wordcount) ghostedit.options.defaultui.wordcount = true;
 		
+		// Add api methods
+		ghostedit.api.defaultui = ghostedit.api.defaultui || {};
+		
+		ghostedit.api.defaultui.showabout = function () {
+			_ui.modal.showabout();
+		};
+		
 		// Run or register init event
 		if (ghostedit.ready) {
 			_ui.init();

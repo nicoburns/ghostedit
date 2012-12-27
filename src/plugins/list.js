@@ -164,7 +164,6 @@
 			
 			if (!_list.isList(target)){
 				if (_list.isListItem (target)) {
-					//DEV console.log("islistitem");
 					return ghostedit.plugins.textblock.selection.deleteContents(ghostedit.dom.getFirstChildGhostBlock(target));
 				}
 				return false;

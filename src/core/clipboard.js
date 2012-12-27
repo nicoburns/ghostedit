@@ -2,7 +2,9 @@
 	
 	var _clipboard = {}, _paste, _cut,
 	lasso = window.lasso,
-	ghostedit = window.ghostedit;
+	ghostedit = window.ghostedit,
+	console = window.console || {};
+	console.log = console.log || function () {};
 	
 	_clipboard.init = function () {
 		_clipboard.paste.init();

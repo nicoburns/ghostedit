@@ -5,22 +5,773 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1
-Release Date:      2012-12-13
+Release Date:      2012-12-27
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
+/* Lasso range library version 1.1.0
+
+Name:				Lasso
+Description:			Lightweight, crossbrowser javascript library for creating and modifying ranges. Used by the GhostEdit editor.
+Licence:				Dual licensed under MIT and LGPL licenses.
+Browser Support:		Internet Explorer 6+, Mozilla Firefox 3.5+, Google Chrome, Apple Safari 3+, Opera 10.50+, Any other browser that supports DOMranges or TextRanges
+Author:				Nico Burns <nico@nicoburns.com>
+Website:				http://ghosted.it/lasso
+Version:				1.4.0
+Release Date:			1st July 2012
+
+Changelog:
+Changes to the node selection functions.
+Change to deleteContents() for TextRange browsers (ie)
+Added clearSelection();
+
+Available methods:
+	Native range:
+		setFromNative(nativerange)
+		getNative()
+	Selection:
+		setToSelection()
+		select()
+		clearSelection()
+	Modify range:
+		reset()
+		setStartToRangeStart(lasso object | range)
+		setStartToRangeEnd(lasso object | range)
+		setEndToRangeStart(lasso object | range)
+		setStartToRangeEnd(lasso object | range)
+	Modify content:
+		deleteContents()
+		pasteText(string)
+	Get content:
+		getText()
+		extractText()
+		getHTML()
+		extractHTML()
+	Node/element:
+		selectNode(node)
+		selectNodeContents(node) [only works on block elements in ie8]
+		setCaretToStart(elem | elemid)
+		setCaretToEnd(elem | elemid)
+	Range information:
+		isCollapsed()
+		compareEndPoints()
+		getStartNode()
+		getEndNode()
+		getParentNode()
+		getStartElement()
+		getEndElement()
+	other:
+		clone()
+		saveToDOM()
+		restoreFromDOM()
+		isSavedRange()
+		removeDOMmarkers()
+		bookmarkify() [ie <= 8 only]
+		unbookmarkify() [ie <= 8 only]
+
+Example usage:
+
+	1. Set the caret to the end of an element with ID 'testelem':
+	lasso().setCaretToEnd('testelem').select();
+
+	2. Get the currently selected text
+	lasso().setToSelection().getText();
+*/
+
+window.lasso = function() {
+	//define local range object to be returned at end
+	var r = {
+		saved: null,
+		endpoint: null,
+		startpoint: null,
+		bookmark: null,
+		textrange: false,
+		domrange: false
+	},
+	lasso = window.lasso;
+		
+	r.init = r.reset = r.create = function () {
+		if(document.createRange) {
+			r.textrange = false;
+			r.saved = document.createRange();
+		}
+		else if (document.selection) {
+			r.textrange = true;
+			r.saved = document.body.createTextRange();
+		}
+		r.bookmark = false;
+		r.domrange = !r.textrange;
+		return r;
+	};
+	
+	r.setToEmpty = function () {
+		if (r.domrange) {
+			r.saved = document.createRange();
+		}
+		else if (r.textrange) {
+			r.saved = document.body.createTextRange();
+		}
+		return r;
+	};
+	
+	
+	/* Native Range Functions */
+	
+	r.setFromNative = function (nativerange) {
+		r.saved = nativerange;
+		return r;
+	};
+	
+	r.getNative = function () {
+		return r.saved;
+	};
+	
+	
+	/* Selection Functions */
+	
+	r.setToSelection = function () {
+		var s;
+		if(r.domrange) {
+			s = window.getSelection();
+			if(s.rangeCount > 0) {
+				r.saved = s.getRangeAt(0).cloneRange();
+			}
+		}
+		else if (r.textrange) {
+			r.saved = document.selection.createRange();
+		}
+		return r;
+	};
+	
+	r.select = function () {
+		if (r.domrange) {
+			var s = window.getSelection();
+			if (s.rangeCount > 0) s.removeAllRanges();
+			s.addRange(r.saved);
+		}
+		else if (r.textrange) {
+			r.saved.select();
+		}
+		return r;
+	};
+	
+	r.clearSelection = function () {
+		if (r.domrange) {
+			var s = window.getSelection();
+			if (s.rangeCount > 0) s.removeAllRanges();
+		}
+		else if (r.textrange) {
+			document.selection.empty();
+		}
+		return r;
+	};
+	
+	
+	/* Modify Range Functions */
+	
+	r.collapseToStart = function () {
+		r.saved.collapse(true);
+		return r;
+	};
+	
+	r.collapseToEnd = function () {
+		r.saved.collapse(false);
+		return r;
+	};
+	
+	r.setStartToRangeStart = function (range) {
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.domrange) {
+			r.saved.setStart(range.startContainer, range.startOffset);
+		}
+		else if (r.textrange) {
+			r.saved.setEndPoint("StartToStart", range);
+		}
+		return r;
+	};
+	
+	r.setStartToRangeEnd = function (range) {
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.domrange) {
+			r.saved.setStart(range.endContainer, range.endOffset);
+		}
+		else if (r.textrange) {
+			r.saved.setEndPoint("StartToEnd", range);
+		}
+		return r;
+	};
+	
+	r.setEndToRangeStart = function (range) {
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.domrange) {
+			r.saved.setStart(range.endContainer, range.endOffset);
+		}
+		else if (r.textrange) {
+			r.saved.setEndPoint("EndToStart", range);
+		}
+		return r;
+	};
+	
+	r.setEndToRangeEnd = function (range) {
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.domrange) {
+			r.saved.setEnd(range.endContainer, range.endOffset);
+		}
+		else if (r.textrange) {
+			r.saved.setEndPoint("EndToEnd", range);
+		}
+		return r;
+	};
+	
+	
+	/* Modify Content Functions */
+	
+	r.deleteContents = function () {
+		if (r.domrange) {
+			r.saved.deleteContents();
+		}
+		else if (r.textrange) {
+			/* TextRange deleting seems quite buggy - these *should* work, but text = "" has been most successful so far
+			try {
+				r.saved.pasteHTML("");
+			}
+			catch (e) {
+				r.saved.execCommand("delete");
+			}*/
+			r.saved.text = "";
+		}
+		return r;
+	};
+	
+	r.pasteText = function (text, collapse) {
+		if(typeof collapse === "undefined") collapse = true;
+		
+		r.deleteContents();
+		
+		if (r.domrange) {
+			var txt = document.createTextNode(text);
+			r.saved.insertNode(txt);
+			r.reset().selectNodeContents(txt);
+		}
+		else if (r.textrange) {
+			r.saved.pasteHTML(text);
+		}
+		
+		if (collapse) r.collapseToEnd();
+		r.select();
+		
+		return r;
+	};
+	
+	r.insertNode  = function (node, collapse) {
+		var div;
+		if(typeof collapse === "undefined") collapse = true;
+		
+		r.deleteContents();
+		
+		if (r.domrange) {
+			r.saved.insertNode(node);
+			r.setToEmpty().selectNodeContents(node);
+		}
+		else if (r.textrange) {
+			div = document.createNode("div");
+			div.appendChild(node);
+			r.saved.pasteHTML(div.innerHTML);
+		}
+		
+		if (collapse) r.collapseToEnd();
+		//r.select();
+		
+		return r;
+	};
+	
+	/* Get Content Functions */
+
+	r.getText = function () {
+		if (r.domrange) {
+			return r.saved.toString();
+		}
+		else if (r.textrange) {
+			return r.saved.text;
+		}
+	};
+
+	r.extractText = function () {
+		var text = r.getText();
+		r.deleteContents();
+		return text;
+	};
+	
+	r.getHTML = function () {
+		var tempelem, docfrag;
+		if (r.domrange) {
+			docfrag = r.saved.cloneContents();
+			tempelem = document.createElement("div");
+			tempelem.appendChild(docfrag);
+			return tempelem.innerHTML;
+		}
+		else if (r.textrange) {
+			return r.saved.htmlText;
+		}
+	};
+	
+	r.extractHTML = function () {
+		var html = r.getHTML();
+		r.deleteContents();
+		return html;
+	};
+	
+	
+	/* Node/Element Functions */
+	
+	r.actualSelectNode = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNode(elem);
+		}
+		else if (r.textrange) {
+			r.saved.moveToElementText(elem);
+		}
+		return r;
+	};
+		
+	r.selectNode = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+		}
+		else if (r.textrange) {
+			r.saved.moveToElementText(elem);
+		}
+		return r;
+	};
+	
+	//Only works on block elements in ie8
+	r.selectNodeContents = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		var r1, r2;
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+		}
+		else if (r.textrange) {
+			r.saved.moveToElementText(elem);
+			r1 = lasso().setCaretToStart(elem).getNative();
+			r2 = lasso().setCaretToEnd(elem).getNative();
+			r.saved.setEndPoint("StartToStart", r1);
+			r.saved.setEndPoint("EndToStart", r2);
+		}
+		return r;
+	};
+	
+	r.setCaretToStart = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+			r.saved.collapse(true);
+		}
+		else if (r.textrange) {
+			/*elem.innerHTML = "<span id=\"range_marker\">&#x200b;</span>" + elem.innerHTML;
+			r.selectNode('range_marker');//.deleteContents(); // For some reason .deleteContents() sometimes deletes too much
+			document.getElementById('range_marker').parentNode.removeChild(document.getElementById('range_marker'));*/
+			r.saved.moveToElementText(elem);
+			r.saved.collapse(true);
+		}
+		return r;
+	};
+	
+	r.setCaretToBlockStart = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+			r.saved.collapse(true);
+		}
+		else if (r.textrange) {
+			r.saved.moveToElementText(elem);
+			r.saved.collapse(false);
+			
+			r.saved.move("character", -(elem.innerText.length + 1));
+		}
+		return r;
+	};
+	
+	r.selectInlineStart = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+			r.saved.collapse(true).select();
+		}
+		else if (r.textrange) {
+			elem.innerHTML = "a" + elem.innerHTML; // The 'a' is arbitrary, any single character will work
+    
+			r.saved.moveToElementText(elem);
+			r.saved.collapse(false);
+			
+			r.saved.move("character", -(elem.innerText.length + 1));
+			r.saved.moveEnd("character", 1);
+			r.saved.select();
+			r.saved.text = "";
+		}
+		return r;
+	};
+	
+	r.setCaretToEnd = function (elem) {
+		if(typeof elem === "string") elem = document.getElementById(elem);
+		
+		if (r.domrange) {
+			r.saved.selectNodeContents(elem);
+			r.saved.collapse(false);
+		}
+		else if (r.textrange) {
+			/*elem.innerHTML = elem.innerHTML + "<span id=\"range_marker\">&#x200b;</span>";
+			r.selectNode('range_marker');//.deleteContents();
+			document.getElementById('range_marker').parentNode.removeChild(document.getElementById('range_marker'));*/
+			r.saved.moveToElementText(elem);
+			r.saved.collapse(false);
+		}
+		return r;
+	};
+
+	
+	/* Range Information Functions */
+	
+	r.isCollapsed = function () {
+		if (r.domrange) {
+			return r.saved.collapsed;
+		}
+		else if (r.textrange) {
+			//return r.saved.compareEndPoints("StartToEnd", r.saved) === 0 ? true : false;
+			return r.saved.isEqual(r.clone().collapseToStart().saved);
+		}
+	};
+	
+	r.compareEndPoints = function (how, range) {
+		var R;
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.domrange) {
+			// Note that EndToStart and StartToEnd are reversed (to make compatible with ie order)
+			R = window.Range;
+			var howlookup = {"StartToStart": R.START_TO_START,
+						"StartToEnd": R.END_TO_START,
+						"EndToStart": R.START_TO_END,
+						"EndToEnd": R.END_TO_END};				
+			how = howlookup[how];
+			return r.saved.compareBoundaryPoints(how, range);
+		}
+		else if (r.textrange) {
+			return r.saved.compareEndPoints(how, range);
+		}
+	};
+	
+	r.isEqualTo = function (range) {
+		if (range && range.saved) range = range.getNative();
+		
+		if (r.compareEndPoints("StartToStart", range) !== 0) return false;
+		if (r.compareEndPoints("EndToEnd", range) !== 0) return false;
+		
+		return true;
+	};
+	
+	r.getStartNode = function () {
+		if (r.domrange) {
+			return r.saved.startContainer;
+		}
+		else if (r.textrange) {
+			var range = r.saved.duplicate();
+			range.collapse(true);
+			return range.parentElement();
+		}
+	};
+	
+	r.getEndNode = function () {
+		if (r.domrange) {
+			return r.saved.endContainer;
+		}
+		else if (r.textrange) {
+			var range = r.saved.duplicate();
+			range.collapse(false);
+			return range.parentElement();
+		}
+	};
+	
+	r.getParentNode = function () {
+		if (r.domrange) {
+			return r.saved.commonAncestorContainer;
+		}
+		else if (r.textrange) {
+			return r.saved.parentElement();
+		}
+	};
+	
+	r.getStartElement = function () {
+		return r.util.getParentElement( r.getStartNode() );
+	};
+	
+	r.getEndElement = function () {
+		return r.util.getParentElement( r.getEndNode() );
+	};
+	
+	r.getParentElement = function () {
+		if (r.domrange) {
+			return r.util.getParentElement( r.saved.commonAncestorContainer);
+		}
+		else if (r.textrange) {
+			return r.saved.parentElement();
+		}
+	};
+
+
+	/* Clone Function */
+	
+	r.clone = function () {
+		var r2 = lasso();
+		if(r.domrange) {
+			r2.saved = r.saved.cloneRange();
+		}
+		else if (r.textrange) {
+			r2.saved = r.saved.duplicate();
+		}
+		r2.bookmark = r.cloneBookmark();
+		return r2;
+	};
+	
+	/* Save and Restore Functions */
+	
+	r.saveToDOM = function (id) {
+		var start, end, smark, emark, collapsed;
+		if (!id) id = "lasso";
+		
+		r.removeDOMmarkers(id);
+		
+		collapsed = r.isCollapsed();
+		
+		start = r.clone().collapseToStart().getNative();
+		if (!collapsed) end = r.clone().collapseToEnd().getNative();
+		
+		if (r.domrange) {
+			smark = document.createElement("span");
+			smark.innerHTML = "&#x200b";
+			smark.id = id + "_range_start";
+			start.insertNode(smark);
+			if (!collapsed) {
+				emark = document.createElement("span");
+				emark.innerHTML = "&#x200b";
+				emark.id = id + "_range_end";
+				end.insertNode(emark);
+			}
+		}
+		else if (r.textrange) {
+			start.pasteHTML("<span id=\"" + id + "_range_start\">&#x200b;</span>");
+			if (!collapsed) {
+				end.pasteHTML("<span id=\"" + id + "_range_end\">&#x200b;</span>");
+			}
+		}
+		
+		// Restore in case selection is lost by changing DOM above
+		r = r.restoreFromDOM(id, false) || r.reset();
+		
+		return r;
+	};
+	
+	r.restoreFromDOM = function (id, removemarkers) {
+		var start, end, smark, emark;
+		if (!id || id === "" || id === true || id === false) id = "lasso";
+		if (id === true) removemarkers = true;
+		
+		smark = document.getElementById(id + "_range_start");
+		emark = document.getElementById(id + "_range_end");
+
+		if (!smark) return false;
+		
+		start = lasso().actualSelectNode(smark).collapseToEnd();
+		if (removemarkers !== false) smark.parentNode.removeChild(smark);
+		
+		if (emark) {
+			end= lasso().actualSelectNode(emark).collapseToStart();
+			if (removemarkers !== false) emark.parentNode.removeChild(emark);
+		}
+		else {
+			end = start;
+		}
+		
+		r = lasso().setStartToRangeStart(start).setEndToRangeEnd(end);
+		
+		return r;
+	};
+	
+	r.isSavedRange = function (id) {
+		if (!id) id = "lasso";
+		
+		return (document.getElementById(id + "_range_start")) ? true : false;
+	};
+	
+	r.removeDOMmarkers = function (id) {
+		var smark, emark;
+		if (!id) id = "lasso";
+		
+		smark = document.getElementById(id + "_range_start");
+		emark = document.getElementById(id + "_range_end");
+		
+		if (smark) smark.parentNode.removeChild(smark);
+		if (emark) emark.parentNode.removeChild(emark);
+	};
+	
+	
+	/* IE <= 8 Only Functions */
+	
+	r.bookmarkify = function (rootnode) {
+		if (r.domrange) {
+			var node, startnodeoffsets, endnodeoffsets, b = {};
+			if (!rootnode || !rootnode.nodeType) return r;
+			
+			// Save start and end offset to bookmark
+			b.startoffset = r.saved.startOffset;
+			b.endoffset = r.saved.endOffset;
+			
+			// Get start node offset path relative to rootnode
+			startnodeoffsets = [];
+			node = r.saved.startContainer;
+			while (node !== rootnode) {
+				startnodeoffsets.unshift(r.util.getNodeOffset(node));
+				node = node.parentNode;
+				if (node === null) return r;
+			}
+			
+			// Get end node offset path relative to rootnode
+			endnodeoffsets = [];
+			node = r.saved.endContainer;	
+			while (node !== rootnode) {
+				endnodeoffsets.unshift(r.util.getNodeOffset(node));
+				node = node.parentNode;
+				if (node === null) return r;
+			}
+			
+			// Save paths to bookmark
+			b.startnodeoffsets = startnodeoffsets.join("-");
+			b.endnodeoffsets = endnodeoffsets.join("-");
+			
+			// Save rootnode to bookmark (used to show that bookmark exists)
+			b.rootnode = rootnode;
+			
+			r.bookmark = b;
+		}
+		else if (r.textrange) {
+			r.bookmark = r.saved.getBookmark();
+		}
+		return r;
+	};
+		
+	r.unbookmarkify = function (rootnode) {
+		var bookmark = r.bookmark;
+		if (r.domrange) {
+			var node, offset, startnodeoffsets, endnodeoffsets, startcontainer, endcontainer;
+			if (!bookmark.rootnode || !rootnode) return r.setToEmpty();
+			
+			node = rootnode;
+			startnodeoffsets = bookmark.startnodeoffsets.split("-");
+			while (startnodeoffsets.length > 0) {
+				offset = startnodeoffsets.shift();
+				if (!node.childNodes || !node.childNodes[offset]) return r.setToEmpty();
+				node = node.childNodes[offset];
+			}
+			startcontainer = node;
+			
+			node = rootnode;
+			endnodeoffsets = bookmark.endnodeoffsets.split("-");
+			while (endnodeoffsets.length > 0) {
+				offset = endnodeoffsets.shift();
+				if (!node.childNodes || !node.childNodes[offset]) return r.setToEmpty();
+				node = node.childNodes[offset];
+			}
+			endcontainer = node;
+			
+			r.setToEmpty();
+			r.saved.setStart(startcontainer, bookmark.startoffset);
+			r.saved.setEnd(endcontainer, bookmark.endoffset);
+		}
+		else if (r.textrange) {
+			if (r.bookmark) {
+				r.reset().saved.moveToBookmark(bookmark);
+				r.bookmarkify();
+			}
+		}
+		return r;
+	};
+	
+	r.clearBookmark = function () {
+		r.bookmark = false;
+		return r;
+	};
+	
+	r.cloneBookmark = function (bookmark) {
+		if (!bookmark) bookmark = r.bookmark;
+		if (r.domrange) {
+			return !bookmark ? false : {
+				"rootnode": bookmark.rootnode,
+				"startnodeoffsets": bookmark.startnodeoffsets,
+				"endnodeoffsets": bookmark.endnodeoffsets,
+				"startoffset": bookmark.startoffset,
+				"endoffset": bookmark.endoffset
+			};
+		}
+		else if (r.textrange) {
+			if (!bookmark) return false;
+			var r2 = lasso().getNative();
+			return r2.moveToBookmark(bookmark) ? r2.getBookmark() : false;
+		}
+	};
+	
+	/* Utility, 'non-public' functions, used by other functions */
+	
+	r.util = { //Used only for next two functions (getStartElement and getEndElement)
+		getParentElement: function (node) {
+			if (node.nodeType !== 1) {
+				while (node.nodeType !== 1) {
+					node = node.parentNode;
+					if (node === null) return null;
+				}
+			}
+			return node;
+		},
+		
+		getNodeOffset: function (node) {
+			if (!node || !node.parentNode) return;
+			var offset = 0;
+			while (node.parentNode.childNodes[offset] !== node) {
+				offset += 1;
+			}
+			return offset;
+		}
+	};
+	
+	r.init();
+	return r;
+};
 (function(window, undefined) {
 	// Create ghostedit object and global variables
 	var _ghostedit = {
 		version: "1.0rc1",
 		enabledplugins: [],
-		uicontext: "",
+		ready: false,
 		active: false,
 		isEditing: true,
 		blockElemId: 0,
 		editorchrome: null,
 		debug: false
 	};
+	
+	// Empty object for references to any elements which need to be globally accesable to be stored on
+	_ghostedit.el = {};
 	
 	// Empty api object for plugins and init functions to add to
 	_ghostedit.api = {};
@@ -31,10 +782,1413 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	// Add the ghostedit object to the global namespace
 	window.ghostedit = _ghostedit;
 })(window);
+(function(window, undefined) {
+	window.ghostedit.init = function (source, options) {
+		if (typeof source === "string") source = document.getElementById(source);
+		var i, handler,
+		ghostedit = window.ghostedit, 
+		rootnode, uilayer, htmlelem;
+		
+		// Set up user options
+		ghostedit.options = {};
+		ghostedit.options = options || {};
+		
+		// Check for debug option (but only enable if log module exists)
+		if (ghostedit.options.debug) {
+			ghostedit.debug = true;
+		}
+		
+		// Detect whether we need to add extra br's to work around firefox's bugs (also used for webkit and opera)
+		ghostedit.browserEngine = ghostedit.util.detectEngines();
+		ghostedit.useMozBr = (ghostedit.browserEngine.gecko !== 0 || ghostedit.browserEngine.webkit !== 0 || ghostedit.browserEngine.opera !== 0);
+		
+		//Hide div containing original content
+		source.style.display = 'none';
+		ghostedit.el.source = source;
+		
+		// Create contextual ui layer
+		uilayer = document.createElement("div");
+		uilayer.id = "ghostedit_uilayer";
+		uilayer.className = "ghostedit_uilayer";
+		uilayer.innerHTML = "<span style='position: absolute; display: none;left: 0; top: 0;line-height: 0'>ie bug fix</span>";
+		source.parentNode.insertBefore(uilayer, source);
+		ghostedit.el.uilayer = uilayer;
+		
+		// Run init events for core modules
+		ghostedit.history.init();
+		ghostedit.inout.init();
+		ghostedit.clipboard.init();
+		
+		// Enable plugins
+		ghostedit.options.plugins = ghostedit.options.plugins || [];
+		ghostedit.options.plugins.unshift("container", "textblock");
+		if (ghostedit.options.plugins) {
+			for (i = 0; i < ghostedit.options.plugins.length; i++) {
+				ghostedit.api.plugin.enable(ghostedit.options.plugins[i]);
+			}
+		}
+		
+		// Send init event to plugins (and core modules)
+		ghostedit.event.trigger("init");
+		
+		// Import initial content
+		rootnode = ghostedit.inout.importHTML(source);
+		source.parentNode.insertBefore(rootnode, source);
+		ghostedit.el.rootnode = rootnode;
+		
+		// Focus the editor
+		handler = rootnode.getAttribute("data-ghostedit-handler");
+		ghostedit.plugins[handler].focus(rootnode);
+		
+		// Make sure that FF uses tags not CSS, and doesn't show resize handles on images
+		try{document.execCommand("styleWithCSS", false, false);} catch(err){}//makes FF use tags for contenteditable
+		try{document.execCommand("enableObjectResizing", false, false);} catch(err){}//stops resize handles being resizeable in FF
+		
+		// Save selection & setup undo
+		ghostedit.selection.save();
+		ghostedit.history.reset();
+		ghostedit.history.saveUndoState();
+		
+		// Attach event handlers to html element
+		htmlelem = document.getElementsByTagName("html")[0];
+		ghostedit.util.addEvent(htmlelem, "dragenter", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(htmlelem, "dragleave", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(htmlelem, "dragover", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(htmlelem, "drop", ghostedit.util.cancelEvent);
+		
+		// Attach handlers to rootnode
+		ghostedit.util.addEvent(rootnode, "click", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "mouseup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keyup", ghostedit.selection.save);
+		ghostedit.util.addEvent(rootnode, "keydown", function (event) {ghostedit.event.keydown(this, event); });
+		ghostedit.util.addEvent(rootnode, "keypress", function (event) {ghostedit.event.keypress(this, event); });
+		ghostedit.util.addEvent(rootnode, "dragenter", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragleave", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "dragover", ghostedit.util.cancelEvent);
+		ghostedit.util.addEvent(rootnode, "drop", ghostedit.util.cancelEvent);
+		
+		// Focus rootnode
+		rootnode.focus();
+		ghostedit.plugins.container.focus(rootnode);
+		
+		ghostedit.ready = true;
+		ghostedit.event.trigger("init:after");
+	};
+})(window);
+(function (window, undefined) {
 
+	var _plugins = {},
+	ghostedit = window.ghostedit;
+	
+	_plugins.register = function(name, object) {
+		if (ghostedit.plugins[name]) return false;
+		
+		ghostedit.plugins[name] = object;
+		
+		return true;
+	};
+	
+	_plugins.enable = function (name) {
+		if (!ghostedit.plugins[name]) return false;
+		if (ghostedit.enabledplugins[name]) _plugins.disable(name);
+		
+		var plugin = ghostedit.plugins[name];
+		if (typeof(plugin.enable) === "function") {
+			plugin.enable();
+		}
+		ghostedit.enabledplugins[name] = true;
+	};
+	
+	_plugins.disable = function (name) {
+		if (!ghostedit.enabledplugins[name] || !ghostedit.plugins[name]) return false;
+		
+		var plugin = ghostedit.plugins[name];
+		if (typeof(plugin.disable) === "function") {
+			plugin.disable();
+		}
+		ghostedit.enabledplugins[name] = false;
+	};
+	
+	window.ghostedit.api.plugin = _plugins;
+})(window);
+(function (window, undefined) {
+		
+		var _util = {};
+		
+		_util.trim = function (string) {
+			return string.replace(/^\s+/, "").replace(/\s+$/, "");
+		};
+		
+		// This will call a function using a reference with predefined arguments.
+		//SECOND ARGUMENT = CONTEXT (this) - should usually be false
+		_util.preparefunction = function (func, context /*, 0..n args */) {
+			var args = Array.prototype.slice.call(arguments, 2);
+			return function() {
+				var allArguments = args.concat(Array.prototype.slice.call(arguments));
+				return func.apply(context ? context : this, allArguments);
+			};
+		};
+		
+		_util.isFunction = function (variable) {
+			if (!variable) return false;
+			if (typeof variable !== "function") return false;
+			return true;
+		};
+		
+		_util.cloneObject = function (obj) {
+			var copy, len, i, attr;
+			// Handle the 3 simple types, and null or undefined
+			if (null === obj || "object" !== typeof obj) return obj;
+			
+			// Handle Date
+			if (obj instanceof Date) {
+				copy = new Date();
+				copy.setTime(obj.getTime());
+				return copy;
+			}
+			
+			// Handle Array
+			if (obj instanceof Array) {
+				copy = [];
+				for (i = 0, len = obj.length; i < len; ++i) {
+					copy[i] = _util.cloneObject(obj[i]);
+				}
+				return copy;
+			}
+			
+			// Handle Object
+			if (obj instanceof Object) {
+				copy = {};
+				for (attr in obj) {
+					if (obj.hasOwnProperty(attr)) copy[attr] = _util.cloneObject(obj[attr]);
+				}
+				return copy;
+			}
+		};
+		
+		_util.addClass = function (elem, c) {
+			elem.className = _util.trim(elem.className) + " " + c;
+		};
+		
+		_util.removeClass = function (elem, c) {
+			var r = new RegExp(c,"g");
+			elem.className = _util.trim(elem.className.replace(r, ""));
+		};
+		
+		_util.cancelEvent = function (e) {
+			if (e && e.preventDefault) {
+				e.stopPropagation(); // DOM style (return false doesn't always work in FF)
+				e.preventDefault();
+			}
+			else if (e) {
+				e.returnValue = false;
+			}
+			return false; // false = IE style
+		};
+		
+		_util.cancelAllEvents = function (e) {
+			if (e && e.preventDefault) {
+				e.stopPropagation(); // DOM style (return false doesn't always work in FF)
+				e.preventDefault();
+			}
+			else if (window.event) {
+				window.event.cancelBubble = true; //IE cancel bubble;
+			}
+			return false; // false = IE style
+		};
+		
+		_util.preventDefault = function (e) {
+			// Standards based browsers
+			if (e && e.preventDefault) {
+				e.preventDefault();
+			}
+			// ie <= 8
+			return false;
+		};
+		
+		_util.preventBubble = function (e) {
+			// Standards based browsers
+			if (e && e.stopPropagation) {
+				e.stopPropagation();
+			}
+			// ie <= 8
+			if (window.event) window.event.cancelBubble = true;
+		};
+		
+		_util.addEvent = function (elem, eventType, handle) {
+			if (elem.addEventListener !== undefined) {
+				elem.addEventListener(eventType, handle, false);
+			}
+			else {
+				elem.attachEvent("on" + eventType, handle);
+			}
+		};
+		
+		_util.removeEvent = function (elem, eventType, handle) {
+			if (elem.removeEventListener !== undefined) {
+				elem.removeEventListener(eventType, handle, false);
+			}
+			else {
+				elem.detachEvent("on" + eventType, handle);
+			}
+		};
+		
+		_util.ajax = function (URL, method, params, sHandle, dataType) {
+			var time, connector, xhr;
+			
+			if (!URL || !method) return false;
+			
+			// Get XHR object
+			xhr = false;
+			if(window.XMLHttpRequest && (window.location.protocol !== "file:" || !window.ActiveXObject)) {
+				xhr = new window.XMLHttpRequest();
+			}
+			else {
+				try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
+				catch (e) { try { xhr = new window.ActiveXObject("MSXML2.XMLHTTP"); } catch (e2) {} }
+			}
+			if (!xhr) return false;
+			
+			// Prepare variables
+			method = method.toUpperCase();
+			time = new Date().getTime();
+			URL = URL.replace(/(\?)+$/, "");
+			connector = (URL.indexOf('?') === -1) ? "?" : "&";
+			//connector = (URL.indexOf('?') === URL.length - 1) ? "" : "&";
+
+			// Open ajax Request
+			if (method === "GET") {
+				xhr.open(method, URL + connector + time + "&" + params, true);
+			}
+			else {
+				xhr.open(method, URL + connector + time, true);
+			}
+			
+			// Define function to handle response
+			xhr.onreadystatechange = function () {
+				var responseData;
+				if(xhr.readyState === 4) {
+					if(xhr.status === 200) {
+						responseData = (dataType === "xml") ? xhr.responseXML : xhr.responseText;
+						if (sHandle !== null){ sHandle(true, responseData); }
+						return true;
+					}
+					else{
+						if (sHandle !== null){ sHandle(false, responseData); }
+						return false;
+					}
+				}
+			};
+			
+			// Set HTTP headers
+			xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			//xhr.setRequestHeader("Content-length", params.length);
+			//xhr.setRequestHeader("Connection", "close");
+			
+			// Send ajax request
+			if (method === "POST" && params !== null) {
+				xhr.send(params);
+			}
+			else {
+				xhr.send();
+			}
+		};
+		
+		_util.detectEngines = function() {
+		
+			//rendering engines
+			var engine = {ie: 0, gecko: 0, webkit: 0, khtml: 0, opera: 0, ver: null};
+			
+			// Detect rendering engines/browsers
+			var ua = navigator.userAgent;
+			if (window.opera){
+				engine.ver = window.opera.version();
+				engine.opera = parseFloat(engine.ver);
+			} else if (/AppleWebKit\/(\S+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.webkit = parseFloat(engine.ver);
+			} else if (/KHTML\/(\S+)/.test(ua) || /Konqueror\/([^;]+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.khtml = parseFloat(engine.ver);
+			} else if (/rv:([^\)]+)\) Gecko\/\d{8}/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.gecko = parseFloat(engine.ver);
+			} else if (/MSIE ([^;]+)/.test(ua)){
+				engine.ver = RegExp.$1;
+				engine.ie = parseFloat(engine.ver);
+			}
+			
+			//return it
+			return engine;
+		
+		};
+		
+		window.ghostedit.util = _util;
+})(window);
+(function(window, undefined) {
+	
+	var _event = {
+		listeners: [],
+		listenerid: 0,
+		eventtypes: [],
+		cancelKeypress: false //allows onkeypress event to be cancelled from onkeydown event.
+	},
+	ghostedit = window.ghostedit;
+	
+	// Used to capture non-repeating keyboard event (also, non-printing keys don't fire onkeypress in most browsers)
+	_event.keydown = function (elem, e) {
+		var keycode, ghostblock, handler, handled;
+		ghostedit.selection.save(false);
+		
+		e = !(e && e.istest) && window.event ? window.event : e;
+		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
+		
+		_event.trigger("input:keydown", {"event": e, "keycode": keycode});
+		
+		// Global shortcuts
+		switch(keycode) {
+			case 8: //backspace
+			case 46: // delete key
+				_event.cancelKeypress = false;
+				if(ghostedit.selection.savedRange.isCollapsed() === false) {
+					ghostedit.history.saveUndoState();
+					
+					ghostedit.selection.deleteContents( (keycode === 8) ? "collapsetostart" : "collapsetoend" );
+					
+					ghostedit.history.saveUndoState();
+					_event.cancelKeypress = true;//otherwise opera fires default backspace event onkeyPRESS (not onkeyDOWN)
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 83: //ctrl-s
+				if (e.ctrlKey){
+					ghostedit.api.save();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 66: //ctrl-b
+				if (e.ctrlKey) {
+					ghostedit.textblock.format.bold ();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 73: //ctrl-i
+				if (e.ctrlKey && !e.shiftKey) {
+					ghostedit.textblock.format.italic ();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 85: //ctrl-u
+				if (e.ctrlKey) {
+					ghostedit.textblock.format.underline ();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 90: //ctrl-z
+				if (e.ctrlKey) {
+					ghostedit.history.undo ();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 89: //ctrl-y
+				if (e.ctrlKey) {
+					ghostedit.history.redo ();
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+		}
+		
+		// If not handled by one of above, pass to plugin keydown handlers
+		ghostblock = ghostedit.selection.getContainingGhostBlock();
+		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keydown' function, call it
+			handler = ghostblock.getAttribute("data-ghostedit-handler");
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keydown) {
+				handled = ghostedit.plugins[handler].event.keydown(ghostblock, keycode, e);
+				if (handled === true) break;
+			}
+			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
+			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
+			if (!ghostblock) break;
+		}
+		
+		ghostedit.selection.save();
+		return true;
+	};
+
+	_event.keypress = function (elem, e) {
+		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
+		ghostedit.selection.save();
+		
+		currentDocLen = ghostedit.el.rootnode.innerHTML.length;
+		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
+		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
+		
+		e = !(e && e.istest) && window.event ? window.event : e;
+		keycode = e.keyCode !== null ? e.keyCode : e.charCode;
+		
+		_event.trigger("input:keydown", {"event": e, "keycode": keycode});
+		
+		if (ghostedit.selection.saved.type !== "none" && !ghostedit.selection.savedRange.isCollapsed() && !e.ctrlKey) {
+			ghostedit.selection.deleteContents("collapsetostart");
+		}
+		
+		
+		// Global keyevents
+		switch(keycode) {
+			case 8: //cancel backspace event in opera if cancelKeypress = true
+				if (_event.cancelKeypress === true) {
+					_event.cancelKeypress = false;
+					return ghostedit.util.cancelEvent ( e );
+				}
+			break;
+			case 13: // Enter (don't allow default action for enter to happen)
+				ghostedit.util.cancelEvent ( e );
+			break;
+		}
+		
+		// If not handled by one of above, pass to plugin keypress handlers
+		ghostblock = ghostedit.selection.getContainingGhostBlock();
+		while (true) {
+			// If plugin for the GhostBlock containing the selection has an 'event.keypress' function, call it
+			handler = ghostblock.getAttribute("data-ghostedit-handler");
+			if (ghostedit.plugins[handler] && ghostedit.plugins[handler].event && ghostedit.plugins[handler].event.keypress) {
+				handled = ghostedit.plugins[handler].event.keypress(ghostblock, keycode, e);
+				if (handled === true) break;
+			}
+			
+			// If above GhostBlock doesn't handle the keypress, send event to it's parent
+			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
+			if (!ghostblock) break;
+		}
+		
+		
+		ghostedit.selection.save();
+		return true;
+	};
+
+	_event.addListener = function (event, callback, revokekey) {
+		var listeners, eventtypes, isnewevent, i;
+		if (typeof(callback) !== "function") return false;
+		
+		// Check if array for that event needs to be created
+		listeners = _event.listeners;
+		if (!listeners[event] || typeof(listeners[event]) !== "object" || !(listeners[event] instanceof Array)) {
+			listeners[event] = [];
+		}
+		
+		// Add event to list of events
+		eventtypes = _event.eventtypes;
+		isnewevent = true;
+		for (i = 0; i < eventtypes.length; i++) {
+			if (eventtypes[i] === event) {
+				isnewevent = false;
+				break;
+			}
+		}
+		if (isnewevent) eventtypes.push(event);
+		
+		_event.listenerid++;
+		listeners[event].push({"id": _event.listenerid, "callback": callback, "revokekey": revokekey});
+		return _event.listenerid;
+	};
+
+	_event.removeListener = function (event, listenerid) {
+		var listeners = _event.listeners, i, newlist = [];
+		
+		if(!listeners[event]) return;
+		
+		for (i = 0; i < listeners[event].length; i++) {
+			if (listeners[event].id !== listenerid) {
+				newlist.push(listeners[event][i]);
+			}
+		}
+		
+		listeners[event] = newlist;
+	};
+
+	_event.removeAllListeners = function (revokekey) {
+		var listeners, eventtypes, event, i, j, newlist = [];
+		if(!revokekey) return;
+		
+		listeners = _event.listeners;
+		eventtypes = _event.eventtypes;
+		
+		for (i = 0; i < eventtypes.length; i++) {
+			event = eventtypes[i];
+			for (j = 0; j < listeners[event].length; j++) {
+				if(!listeners[event][j].revokekey || listeners[event][j].revokekey !== revokekey) {
+					newlist.push(listeners[event][j]);
+				}
+			}
+			listeners[event] = ghostedit.util.cloneObject(newlist);
+			newlist = [];
+		}
+	};
+
+	_event.trigger = function (event, params) {
+		var listeners = _event.listeners, i;
+		if (params === undefined) params = {};
+		if (!listeners[event] || typeof(listeners[event]) !== "object" || !(listeners[event] instanceof Array)) return;
+		
+		if (ghostedit.debug) {
+			window.console.log(event);
+			window.console.log(params);
+		}
+		
+		for (i = 0; i < listeners[event].length; i++) {
+			listeners[event][i].callback.call(this, params);
+		}
+	};
+
+	_event.sendBackwards = function (eventtype, source, params) {
+		var target = false, tracker, result, direction;
+		if (!params) params = {};
+		if (!ghostedit.dom.isGhostBlock(source)) return false;
+		
+		tracker = source; //tracks currently tried targets
+		
+		while(true) {
+			
+			if ((target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker))) {
+				direction = "ahead";
+			}
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker))) {
+				direction = "top";
+			}
+			
+			result = _event.send (eventtype, target, direction, params);
+			if (!result) return false;
+			else if (result.handled === true) return true;
+			
+			tracker = target;
+		}
+	};
+
+	_event.sendForwards = function (eventtype, source, params) {
+		var target = false, tracker, result, direction;
+		if (!params) params = {};
+		if (!ghostedit.dom.isGhostBlock(source)) return false;
+		
+		tracker = source; //tracks currently tried targets
+		
+		while(true) {
+			
+			if ((target = ghostedit.dom.getNextSiblingGhostBlock(tracker))) {
+				direction = "behind";
+			}
+			else if ((target = ghostedit.dom.getParentGhostBlock(tracker))) {
+				direction = "bottom";
+			}
+			
+			result = _event.send (eventtype, target, direction, params);
+			if (!result) return false;
+			else if (result.handled === true) return true;
+			
+			tracker = target;
+		}
+	};
+
+	_event.send = function (eventtype, target, fromdirection, params) {
+		var handler, handled;
+
+		if (!target) return false; // = no previous/next GhostBlock
+
+		handler = target.getAttribute("data-ghostedit-handler");
+		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].dom || !ghostedit.plugins[handler].dom.deleteevent) {
+			return {"handled": false}; // = no handler for this elemtype
+		}
+		
+		handled = ghostedit.plugins[handler].dom.deleteevent (target, fromdirection, params);
+
+		return {"handled": handled};
+		
+	};
+	
+	window.ghostedit.event = _event;
+})(window);
+(function(window, undefined) {
+	
+	var _dom = {};
+	
+	_dom.getNodeOffset = function (node) {
+		var offset, nodelist;
+		
+		if (!node || !node.parentNode) return;
+		
+		offset = 0;
+		nodelist = node.parentNode.childNodes;
+		
+		while (nodelist[offset] !== node) {
+			offset += 1;
+		}
+		return offset;
+	};
+
+	_dom.extractContent = function (node) {
+		var frag = document.createDocumentFragment(), child;
+		while ( (child = node.firstChild) ) {
+			frag.appendChild(child);
+		}
+		return frag;
+	};
+
+	_dom.cloneContent = function (node) {
+		var child, i, frag = document.createDocumentFragment();
+		for (i = 0; i < node.childNodes.length; i++) {
+			child = node.childNodes[i];
+			frag.appendChild(child.cloneNode(true));
+		}
+		return frag;
+	};
+
+	_dom.parse = function (node, rules) {
+		var parsednode = false, nodes, parsedchild, i, j, value, text, tagname, tagrules, attribute, style;
+		if (!node || !rules || !node.nodeType) return false;
+		
+		rules.textnode = rules.textnode || {};
+		rules.tags = rules.tags || {};
+		
+		// Handle textnodes
+		if (node.nodeType === 3) {
+			text = (rules.textnode.clean) ? node.nodeValue.replace(/[\n\r\t]/g,"") : node.nodeValue;
+			return (text.length > 0) ? document.createTextNode(text) : false;
+		}
+		
+		// Handle not-element case (textnodes already handled)
+		if (node.nodeType !== 1) return false;
+		
+		// Get rules for tag, if none default to content only
+		tagname = node.tagName.toLowerCase();
+		tagrules = {"contentsonly": true};
+		if (rules.tags[tagname]) {
+			tagrules = rules.tags[tagname];
+			if (typeof tagrules.template === "string") tagrules = tagrules.template;
+			if (typeof tagrules === "string" && rules.templates[tagrules]) tagrules = rules.templates[tagrules];
+			if (typeof tagrules === "string") return false;
+		}
+		
+		
+		// If "contentsonly" flag set, create document fragment, else create element of same type as node
+		parsednode = tagrules.contentsonly ? document.createDocumentFragment() : document.createElement(node.tagName.toLowerCase());
+		
+		// Unless "ignorechildren" flag set, recurse on children
+		if (!tagrules.ignorechildren) {
+			nodes = node.childNodes;
+			for (i = 0; i < nodes.length; i++) {
+				parsedchild = _dom.parse(nodes[i], rules);
+				if (parsedchild) {
+					parsednode.appendChild(parsedchild);
+				}
+			}
+		}
+		
+		// Return here if contents only (no need to copy attributes if no node to copy to)
+		if (tagrules.contentsonly) return (parsednode.childNodes.length > 0) ? parsednode : false;
+		
+		// If attributes specified, copy specified attributes
+		if (tagrules.attributes) {
+			for (i = 0; i < tagrules.attributes.length; i++) {
+				attribute = tagrules.attributes[i];
+				
+				// Handle simple (no rules) case
+				if (typeof attribute === "string") attribute = {"name": attribute};
+				
+				// Get value of attribute on source node
+				if (typeof attribute.name !== "string") break;
+				value  = attribute.value || (attribute.name === "class") ? node.className : node.getAttribute(attribute.name);
+				if (value === undefined) break;
+				attribute.copy = true;
+				
+				// If allowedvalues are specified, check if value is correct
+				if (attribute.allowedvalues) {
+					attribute.copy = false;
+					for (j = 0; j < attribute.allowedvalues.length; j++) {
+						if (attribute.allowedvalues[i] === value){
+							attribute.copy = true;
+							break;
+						}
+					}
+				}
+				
+				// If all checks passed, set attribute on new node
+				if (attribute.copy) {
+					if (attribute.name === "class") {
+						parsednode.className = value;
+					}
+					else {
+						parsednode.setAttribute(attribute.name, value);
+					}
+				}
+			}
+		}
+		
+		
+		// If styles specified, copy specified attributes
+		if (tagrules.styles) {
+			for (i = 0; i < tagrules.styles.length; i++) {
+				style = tagrules.styles[i];
+				
+				// Handle simple (no rules) case
+				if (typeof style === "string") style = {"name": style};
+				
+				// Get value of style on source node
+				if (typeof style.name !== "string") break;
+				if (style.name === "float") style.name = (node.style.cssFloat) ? "cssFloat" : "styleFloat";
+				value  = style.value || node.style[style.name];
+				if (value === undefined) break;
+				style.copy = true;
+				
+				// If allowedvalues are specified, check if value is correct
+				if (style.allowedvalues) {
+					style.copy = false;
+					for (j = 0; j < style.allowedvalues.length; j++) {
+						if (style.allowedvalues[j] === value) {
+							style.copy = true;
+							break;
+						}
+					}
+				}
+				
+				// If all checks passed, set style on new node
+				if (style.copy) parsednode.style[style.name] = value;
+			}
+		}
+		
+		return parsednode;
+	};
+
+	_dom./*compareNodes = function (node1, node2) {
+		var node;
+		
+		// If node1 is a documentFragment, wrap in an element
+		if (n1.nodeType === 11) {
+			node = document.createElement("div");
+			node.appendChild(nodeOrFrag);
+			node1 = node;
+		}
+		
+		// If node2 is a documentFragment, wrap in an element
+		if (n2.nodeType === 11) {
+			node = document.createElement("div");
+			node.appendChild(nodeOrFrag);
+			node2 = node;
+		}
+		
+		function getNextNode (nodelist, current) {
+			
+		}
+		
+		nodes1 = node1.getElementsByTagName(*);
+		
+		
+	},*/
+	
+	isGhostBlock = function (node) {
+		if (!node || !node.nodeType || node.nodeType !== 1) return false;
+		
+		var ghosttype = node.getAttribute("data-ghostedit-elemtype");
+		
+		return (ghosttype !== undefined && ghosttype !== false && ghosttype !== null) ? true : false; 
+	};
+
+	_dom.isChildGhostBlock = function (elem, parent) {
+		var i;
+		
+		if (!elem || !parent || !parent.childNodes) return false;
+		if (elem.nodeType !== 1) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
+		var childblocks = parent.childNodes;
+		for(i = 0; i < childblocks.length; i += 1) {
+			if (elem === childblocks[i]) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	_dom.isGhostToplevel = function (node) {
+		return (node && node.getAttribute("data-ghostedit-isrootnode") === true) ? true : false;
+	};
+
+	_dom.getParentGhostBlock = function (node) {
+		
+		if (!node) return false;
+		
+		do {
+			node = node.parentNode;
+			if (node === null) return false;
+		}
+		while (!_dom.isGhostBlock(node));
+		
+		return node;
+	};
+
+	_dom.getFirstChildGhostBlock = function (node) {
+		var children, i;
+		
+		if (!node || !node.childNodes) return false;			
+		
+		// Otherwise, recurse forwards through DOM until first GhostBlock is found.
+		children = node.childNodes;
+		
+		for (i = 0; i < children.length; i += 1) {
+			if (_dom.isGhostBlock(children[i])) {
+				return children[i];
+			}
+		}
+		
+		return false;
+	};
+
+	_dom.getLastChildGhostBlock = function (node) {
+		var children, i;
+		
+		if (!node || !node.childNodes) return false;			
+		
+		// Otherwise, recurse backwards through DOM until previous GhostBlock is found.
+		children = node.childNodes;
+		
+		for (i = children.length -1; i >= 0; i -= 1) {
+			if (_dom.isGhostBlock(children[i])) {
+				return children[i];
+			}
+		}
+		
+		return false;
+	};
+
+	_dom.getPreviousSiblingGhostBlock = function (node) {
+		var parent, offset, siblings;
+		
+		if (!node || !node.parentNode) return false;			
+		
+		// Otherwise, recurse backwards through DOM until previous GhostBlock is found.
+		parent = node.parentNode;
+		offset = _dom.getNodeOffset (node) - 1;
+		siblings = parent.childNodes;
+		
+		do {
+			if (_dom.isGhostBlock(siblings[offset]) === true)  {
+				return siblings[offset];
+			}
+			offset -= 1;
+		}
+		while (offset >= 0);
+		
+		return false;
+	};
+
+	_dom.getNextSiblingGhostBlock = function (node) {
+		var parent, offset, siblings;
+		
+		if (!node || !node.parentNode) return false;			
+		
+		// Otherwise, recurse forwards through DOM until next GhostBlock is found.
+		parent = node.parentNode;
+		offset = _dom.getNodeOffset (node) + 1;
+		siblings = parent.childNodes;
+		
+		do {
+			if (_dom.isGhostBlock(siblings[offset]) === true)  {
+				return siblings[offset];
+			}
+			offset += 1;
+		}
+		while (offset < siblings.length);
+		
+		return false;
+	};
+
+	_dom.getParentElement = function (node) {
+		if (node.nodeType !== 1) {
+			while (node.nodeType !== 1) {
+				node = node.parentNode;
+				if (node === null) return null;
+			}
+		}
+		return node;
+	};
+
+	_dom.isDescendant = function (parent, child) {
+		var node = child.parentNode;
+		while (node !== null) {
+			if (node === parent) {
+				return true;
+			}
+			node = node.parentNode;
+		}
+		return false;
+	};
+
+	_dom.getFirstChildElement = function (node) {
+		var children, i;
+		
+		if (!node || !node.childNodes) return false;			
+		
+		// Otherwise, recurse forwards through DOM until next element is found.
+		children = node.childNodes;
+		
+		for (i = 0; i < children.length; i += 1) {
+			if (children[i].nodeType === 1) {
+				return children[i];
+			}
+		}
+		
+		return false;
+	};
+
+	_dom.getCertainParent = function (condition, elem) {
+		var args = [].slice.call(arguments);
+		args.shift();
+		if (!condition.apply(this, args)) {
+			while (!condition.apply(this, args)) {
+				elem = elem.parentNode;
+				args[0] = elem;
+				if (elem === null) return false;
+			}
+		}
+		return elem;
+	};
+	
+	window.ghostedit.dom = _dom;
+})(window);
+(function(window, undefined) {
+		
+		var _selection = {
+			savedRange: null,
+			nodepath: [],
+			saved: {type: "none", data: null},
+			archived: {type: "none", data: null}
+		},
+		ghostedit = window.ghostedit,
+		lasso = window.lasso;
+		
+		_selection.save = function (updateui) {
+			var sel;
+			if (updateui !== false) updateui = true;
+			sel = lasso().setToSelection();
+			
+			if (!_selection.isInEditdiv(sel.getStartNode())) {
+				_selection.saved.type = "none";
+				return false;
+			}
+			else {
+				//Save current selection to range
+				_selection.saved.type = "textblock";
+				_selection.saved.data = sel;//.bookmarkify(ghostedit.el.rootnode);
+				
+				// Save to legacy variable
+				_selection.savedRange = _selection.saved.data;
+				
+				ghostedit.event.trigger("selection:change");
+				
+				_selection.updatePathInfo();
+				if (updateui) ghostedit.event.trigger("ui:update");
+				return true;
+			}
+		};
+		
+		_selection.set = function (type, data, updateui) {
+			if (updateui !== false) updateui = true;
+			if (typeof type !== "string") return;
+			
+			// Update selection variables
+			_selection.saved.type = type;
+			_selection.saved.data = data;
+				
+			// Save to legacy variable
+			_selection.savedRange = _selection.saved.data;
+			
+			// Update path information
+			_selection.updatePathInfo();
+			
+			// Send events
+			ghostedit.event.trigger("selection:change");
+			if (updateui) ghostedit.event.trigger("ui:update");
+			return true;
+		};
+		
+		_selection.restore = function (type, data, mustbevalid) {
+			if (!type || typeof type !== "string") type = _selection.saved.type;
+			if (!data) data = _selection.saved.data;
+			
+			// if type is none, but cant be, get archived selection
+			if (type === "none" && mustbevalid) {
+				type = _selection.archived.type;
+				data = _selection.archived.data;
+			} 
+			
+			// If type is none, clear selection
+			if (type === "none") {
+				_selection.clear();
+				return true;
+			}
+			
+			// Else, call restore function from appropriate plugin
+			if (ghostedit.plugins[type] && ghostedit.plugins[type].selection.restore) {
+				if (ghostedit.plugins[type].selection.restore(data)) {
+					return true;
+				}
+				else {
+					_selection.clear();
+					return false;
+				}
+			}
+		};
+		
+		_selection.restoreValid = function (type, data) {
+			return _selection.restore(type, data, true);
+		};
+		
+		_selection.deleteContents = function (collapse) {
+			if (collapse !== "collapsetostart" && collapse !== "collapsetoend") collapse = false;
+			var handler, handled, ghostblock;
+			
+			ghostblock = _selection.getContainingGhostBlock();
+			
+			while (true) {
+				handler = ghostblock.getAttribute("data-ghostedit-handler");
+				handled = ghostedit.plugins[handler].selection.deleteContents(ghostblock, collapse);
+				if (handled === true) break;
+				
+				ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
+				if (!ghostblock) break;
+			}
+						
+			switch (collapse) {
+				case "collapsetostart":
+					lasso().setToSelection().collapseToStart().select();
+				break;
+				case "collapsetoend":
+					lasso().setToSelection().collapseToEnd().select();
+				break;
+			}
+			
+			_selection.save();
+		};
+		
+		_selection.isSameAs = function (sel) {
+			if (!sel || !sel.type) return false;
+			
+			if (sel.type !== _selection.saved.type) return false;
+			
+			if (sel.type === "none") return true;
+			// Else, call compare function from appropriate plugin
+			if (ghostedit.plugins[sel.type] && ghostedit.plugins[sel.type].selection.compare) {
+				return ghostedit.plugins[sel.type].selection.compare (sel.data, _selection.saved.data);
+			}
+			return false;
+		};
+		
+		_selection.clear = function () {
+			lasso().clearSelection();
+			_selection.saved = {"type": "none", "data": null};
+		};
+		
+		_selection.isInEditdiv = function (elem) {
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+					if (elem === null) return false;
+					elem = elem.parentNode;
+					if (elem === null) return false;
+				}
+			}
+			return true;
+		};
+		
+		_selection.updatePathInfo = function (elem) {
+			if (!elem) elem = _selection.saved.data;
+			if (!elem.nodeType) elem = elem.getParentNode();
+			
+			// If nodepath is same as before, don't bother calculating it again
+			// below code DOES NOT equal above statement. (dom node can have moved)
+			//if (elem === _selection.nodepath[0]) return true;
+			
+			_selection.nodepath = [];
+			
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") !== "true") {
+					
+					if (elem === null) return null;
+					
+					if (elem.nodeType === 1) _selection.nodepath.push(elem);
+					
+					elem = elem.parentNode;
+					
+					if (elem === null) return false;
+				}
+			}
+			
+			// Make sure rootnode is also included in path
+			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
+				_selection.nodepath.push(elem);
+			}
+		};
+		
+		_selection.getContainingGhostBlock = function () {
+			var node = _selection.saved.data;
+			if (!node.nodeType) node = node.getParentNode();
+
+			if (!node) return false;
+
+			while (!ghostedit.dom.isGhostBlock(node)) {
+				node = node.parentNode;
+				if (node === null) return false;
+			}
+			
+			return node;
+		};
+		
+		window.ghostedit.selection = _selection;
+})(window);
+(function(window, undefined) {
+	
+	var _inout = {},
+	ghostedit = window.ghostedit;
+	
+	_inout.init = function () {
+		// Set initial variables
+		_inout.reset();
+		
+		// Add listener to check whether the selection has changed since the last undo save
+		ghostedit.event.addListener("selection:change", function () { ghostedit.history.selectionchanged = true; });
+		
+		// Export undo and redo function to the api
+		ghostedit.api.importHTML = function (source) { return _inout.importHTML(source); };
+		ghostedit.api.exportHTML = function () { return _inout.exportHTML(); };
+	};
+	
+	_inout.reset = function () {
+		_inout.importhandlers = [];
+	};
+	
+	_inout.importHTML = function (sourcenode) {
+		var /*tagname, handler, result*/ rootnode;
+		if (!sourcenode || sourcenode.childNodes.length < 1) return false;
+		
+		/*var tagname = sourcenode.tagName.toLowerCase();
+		if (handler = _inout.importhandlers[tagname]) {
+			result = ghostedit.plugins[handler].inout.importHTML(insertedelem, elem)
+			if (result) insertedelem = result;
+		}*/
+		
+		// Call container import, and set resulting domnode's contenteditable to true
+		rootnode = ghostedit.plugins.container.inout.importHTML(sourcenode);
+		rootnode.className = "ghostedit_rootnode";
+		rootnode.setAttribute("data-ghostedit-isrootnode", "true");
+		rootnode.contentEditable = 'true';
+		
+		// Trigger 'import:after' event
+		ghostedit.event.trigger("import:after", {"rootnode": rootnode});
+		
+		// Return rootnode container
+		return rootnode;
+	};
+	
+	_inout.exportHTML = function () {
+		var finalexport,
+		editwrap = ghostedit.el.rootnode;
+		
+		ghostedit.event.trigger("export:before");
+		
+		//Preparation - contenteditable = false
+		editwrap.contentEditable = false;
+		
+		finalexport = ghostedit.plugins.container.inout.exportHTML(editwrap, false);
+		
+		//Tidy up - contenteditable = true
+		editwrap.contentEditable = true;
+		
+		ghostedit.event.trigger("export:after");
+		
+		return finalexport; //{snippet: snippet, full: finalCode};
+	};
+
+	_inout.openPreview = function () {
+		window.open(ghostedit.options.previewurl);
+	};
+	
+	_inout.registerimporthandler = function (importhandler/*, tagnames of elements that can be handled*/) {
+		var i, args, tag;
+		if (typeof importhandler !== "function") return false;
+		if (arguments.length < 2) return false;
+		args = Array.prototype.slice.call(arguments);
+		args.shift();
+		
+		// Loop through arguments
+		for (i = 0; i < args.length; i++) {
+			tag = args[i];
+			
+			_inout.importhandlers[tag] = importhandler;
+		}
+	};
+	
+	window.ghostedit.inout = _inout;
+})(window);
+(function(window, undefined) {
+	
+	var _history = {},
+	ghostedit = window.ghostedit;
+	
+	_history.init = function () {
+		// Set initial variables
+		_history.reset();
+		
+		// Add listener to check whether the selection has changed since the last undo save
+		ghostedit.event.addListener("selection:change", function () { _history.selectionchanged = true; });
+		
+		// Export undo and redo function to the api
+		ghostedit.api.undo = function () { return _history.undo(); };
+		ghostedit.api.redo = function () { return _history.redo(); };
+	};
+	
+	_history.reset = function () {
+		_history.undoData = [];//new Array(_history.undolevels);
+		/*_history.undolevels = 4000,*/
+		_history.undoPoint = 0;
+		_history.selectionchanged = true;
+	};
+	
+	_history.saveUndoState = function (force) {
+		var undoPoint, undoData, contentchanged, selectionchanged, currentstate, undostate,
+		editwrap = ghostedit.el.rootnode;
+		
+		if (force !== true) force = false;
+		
+		ghostedit.event.trigger("history:save:before");
+		
+		// Localise undo variables
+		undoPoint = _history.undoPoint;
+		undoData = _history.undoData;
+		
+		// Get latest undopoint into a variable
+		undostate = undoData[undoPoint];
+		if (!undostate) force = true;
+		
+		// Start capturing current editor state
+		currentstate = {
+			id: "",
+			selection: {
+				"type": ghostedit.selection.saved.type,
+				//"data": ghostedit.selection.saved.type === "textblock" ? ghostedit.selection.saved.data.clone() : ghostedit.selection.saved.data
+				"data": ghostedit.selection.saved.data
+			},
+			content: {
+				"string": editwrap.innerHTML
+			}
+		};
+		
+		// Calcuate whether the selection or content have changed
+		if (!force) {
+			contentchanged = (undostate.content.string !== currentstate.content.string) ? true : false;
+			selectionchanged = !(ghostedit.selection.isSameAs(undostate.selection));
+		}
+		
+		if (force || selectionchanged || contentchanged) {
+			
+			// Clone editor content as documentFragment
+			currentstate.content.dom = ghostedit.dom.extractContent(editwrap.cloneNode(true));
+			
+			if (force || contentchanged) {
+				// Remove existing redo data
+				if (undoPoint > 0) _history.undoData.splice(0, undoPoint);
+				// Save new data and set undoPoint to point at it
+				_history.undoData.unshift(currentstate);
+				_history.undoPoint = 0;
+			}
+			else {
+				_history.undoData[undoPoint] = currentstate;
+			}
+		}
+		
+		ghostedit.event.trigger("history:save:after");
+	};
+	
+	_history.restoreUndoPoint = function (undopoint) {
+		var undoData = _history.undoData,
+		undostate = undoData[undopoint];
+		if (!undostate || undostate.content.string.length < 1) return false;
+		
+		ghostedit.event.trigger("history:restore:before");
+		
+		ghostedit.el.rootnode.innerHTML = "";
+		ghostedit.el.rootnode.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
+		
+		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
+		//ghostedit.selection.save();
+		
+		ghostedit.event.trigger("history:restore:after");
+	};
+	
+	_history.undo = function () {
+		var undoPoint = _history.undoPoint,
+		undoData = _history.undoData,
+		editwrap = ghostedit.el.rootnode;
+		
+		if (undoData[undoPoint+1] === undefined ||
+			undoData[undoPoint+1].content.string.length <= 0) return;
+		// if (undoPoint < _history.undolevels  - 1) return; //unlimited undo levels
+		
+		ghostedit.event.trigger("history:undo:before");
+		// If there are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
+		if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
+			_history.saveUndoState();
+			undoPoint = 1;
+		}
+		// Else, current state already saved, revert to previous saved one (undoPoint + 1)
+		else {
+			if (undoPoint === 0) {
+				_history.saveUndoState();
+			}
+			undoPoint = _history.undoPoint;
+			undoPoint += 1;
+		}
+
+		_history.restoreUndoPoint(undoPoint);
+		_history.undoPoint = undoPoint;
+		_history.undoData = undoData;
+
+		ghostedit.event.trigger("history:undo:after");
+	};
+	
+	_history.redo = function () {
+		var undoPoint = _history.undoPoint,
+		undoData = _history.undoData,
+		editwrap = ghostedit.el.rootnode;
+		
+		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
+			
+			ghostedit.event.trigger("history:redo:before");
+			
+			// The user has made changes since the last undo/redo, throw away redo data and save undo state
+			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
+				_history.saveUndoState(true);
+			}
+			// Last action was an undo/redo, move one point forwards if possible
+			else {
+				undoPoint-=1;
+				_history.restoreUndoPoint(undoPoint);
+				_history.undoPoint = undoPoint;
+				_history.undoData = undoData;
+			}
+			
+			ghostedit.event.trigger("history:redo:after");
+		}
+	};
+	
+	window.ghostedit.history = _history;
+})(window);
 (function (window, undefined) {
 	
-	var _clipboard = {};
+	var _clipboard = {}, _paste, _cut,
+	lasso = window.lasso,
+	ghostedit = window.ghostedit,
+	console = window.console || {};
+	console.log = console.log || function () {};
 	
 	_clipboard.init = function () {
 		_clipboard.paste.init();
@@ -53,9 +2207,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_paste.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "paste", function(event) { _paste.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "paste", function(event) { _paste.handle(event); });
 		}, "clipboard");
-	}
+	};
 	
 	_paste.handle = function (e) {//elem no longer used?
 		
@@ -65,34 +2219,34 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		_paste.savedundopoint = ghostedit.history.undoPoint;
 
 		_paste.triedpasteimage = false;
-		// If webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
+		// If webkit - get data from clipboard, put into rootnode, cleanup, then cancel event
 		if (e.clipboardData && e.clipboardData.getData) {
 			if (/image/.test(e.clipboardData.types)) {
 				_paste.triedpasteimage = true;
 			}
 			
 			if (/text\/html/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/html');
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/html');
 			}
-			else if (/text\/plain/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+			else if (/text\/plain/.test(e.clipboardData.types) || ghostedit.browserEngine.opera) {
+				ghostedit.el.rootnode.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 			}
 			else {
-				ghostedit.editdiv.innerHTML = "";
+				ghostedit.el.rootnode.innerHTML = "";
 			}
 			_paste.waitfordata();
 			return ghostedit.util.cancelEvent(e);
 		}
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		else {
-			ghostedit.editdiv.innerHTML = "";
+			ghostedit.el.rootnode.innerHTML = "";
 			_paste.waitfordata();
 			return true;
 		}
 	};
 	
 	_paste.waitfordata = function () {
-		var elem = ghostedit.editdiv;
+		var elem = ghostedit.el.rootnode;
 		if (elem.childNodes && elem.childNodes.length > 0) {
 			_paste.process();
 		}
@@ -102,16 +2256,13 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_paste.process = function () {
-		var elem, elems, caretelemtype, isfirstelem, i, j, currentelem, currentelemtype, subelem, appenddata = "";
-		var newelems, nodetagtype, nodelist = "", insertelem, previnsertelem, nextelem, tempelem, images, handler, target, result, source, nodepos, position;
-		var blocks, range, child, index, block;
-		var pastenode, collapsed, hasmerged;
+		var pastenode, collapsed, hasmerged, handler, target, result, source, position;
 		
 		// Extract pasted content into a new element
 		pastenode = document.createElement("div");
 		console.log("raw paste content");
-		console.log (ghostedit.editdiv.cloneNode(true));
-		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.editdiv);
+		console.log (ghostedit.el.rootnode.cloneNode(true));
+		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.el.rootnode);
 		console.log ("processed content");
 		console.log (pastenode.innerHTML);
 		
@@ -119,6 +2270,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.history.undoData = _paste.savedundodata;
 		ghostedit.history.undoPoint = _paste.savedundopoint;
 		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
+		ghostedit.selection.save();
 		
 		console.log(ghostedit.selection.saved);
 		// Delete selection contents if selection is non-collapsed
@@ -246,7 +2398,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			
 			source = ghostedit.dom.getNextSiblingGhostBlock(source);
-		};
+		}
 		
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", true).select();
 		if (ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
@@ -270,16 +2422,15 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		ghostedit.selection.save();
 		
-		ghostedit.event.trigger("postpaste");
-		
 		ghostedit.history.undoData = _paste.savedundodata;
 		ghostedit.history.undoPoint = _paste.savedundopoint;
 		ghostedit.history.saveUndoState();
 		
 		if (_paste.triedpasteimage) {
-			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
 			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
 		}
+		
+		ghostedit.event.trigger("clipboard:paste:after");
 	};
 	
 	_cut = {
@@ -290,18 +2441,18 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	
 	_cut.init = function () {
 		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "cut", function(event) { _cut.handle(event); });
+			ghostedit.util.addEvent(ghostedit.el.rootnode, "cut", function(event) { _cut.handle(event); });
 		}, "clipboard");
-	}
+	};
 	
-	_cut.handle = function (e) {
+	_cut.handle = function () {
 		
 		// Save editor state, and save undo data in case paste functions mess up undo stack
 		ghostedit.history.saveUndoState();
 		_cut.savedundodata = ghostedit.history.undoData;
 		_cut.savedundopoint = ghostedit.history.undoPoint;
 
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
+		//Else - empty rootnode and allow browser to paste content into it, then cleanup
 		setTimeout(_cut.cleanup, 20);
 		return true;
 	};
@@ -324,1844 +2475,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	window.ghostedit.clipboard = _clipboard;
 })(window);
 (function (window, undefined) {
-	_container = {};
 	
-	/*_container.enable = function () {
-		//This causes nested containers, and isn't needed
-		//ghostedit.inout.registerimporthandler (_container.inout.importHTML, "div");
-		return true;
-	}*/
-	
-	_container.ghostevent = function (type, block, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false;
-		switch (type) {
-			case "deletebehind":
-				childblocks = block.childNodes;
-				for(i = childblocks.length - 1; i >= 0; i -= 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefromahead", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				
-				if (!eventhandled) {
-					// No child elements behind element that accepted delete
-					// Do nothing because container doesn't allow deletes behind it
-				}
-			break;
-			case "deleteahead":
-				childblocks = block.childNodes;
-				for(i = 0; i < childblocks.length; i += 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false && childblocks[i].getAttribute("data-ghostedit-elemtype") !== null) {
-						if (docall === true) {
-							blocktype = childblocks[i].getAttribute("data-ghostedit-elemtype");
-							if(ghostedit.plugins[blocktype].ghostevent("deletefrombehind", childblocks[i], params)) {
-								eventhandled = true;
-								break;
-							}
-						}
-						else if (childblocks[i] === params.sourceblock) {
-							docall = true;
-						}
-					}
-				}
-				
-				if (!eventhandled) {
-					// No child elements behind element that accepted delete
-					// Do nothing because container doesn't allow deletes behind it
-				}
-			break;
-		}		
-		
-	}
-	
-	_container.dom = {
-	
-		addchild: function (target, wheretoinsert, anchorelem, newElem) {
-			
-			if (wheretoinsert === "before") {
-				target.insertBefore(newElem, anchorelem);
-			}
-			else {
-				if (anchorelem.nextSibling != null) {
-					target.insertBefore(newElem, anchorelem.nextSibling);
-				}
-				else {
-					target.appendChild(newElem);
-				}
-			}
-			
-			return true;
-		},
-		
-		removechild: function (target, child) {
-			if (!target || !child) return false;
-			
-			target.removeChild(child);
-			
-			return true;
-		}
-	}
-		
-	_container.selection = {
-		deleteContents: function (container, collapse) {
-			var i, startelem, endelem, startblock, endblock, startcblock, endcblock, childblocks, sametagtype, savedcontent, range, savedrange, dodelete, r1, r2, b1, b2, firsttextblocktype, dummynode, insertId, insertedelem;
-			
-			var startofblock, endofblock, selrange, atverystart = false, atveryend = false, firstchildblock, lastchildblock, condition, childblocktype, status, message, handler, block;
-			
-			// Temporary selection range to avoid changing actual saved range
-			if(ghostedit.selection.saved.type !== "textblock") return false;
-			selrange = ghostedit.selection.saved.data;
-			
-			// Get first and last child ghostblock
-			childblocks = container.childNodes;
-			firstchildblock = ghostedit.dom.getFirstChildGhostBlock(container);
-			lastchildblock = ghostedit.dom.getLastChildGhostBlock(container);
-			
-			// Ranges representing the start and end of the block
-			startofblock = lasso().setCaretToStart(firstchildblock);
-			endofblock = lasso().setCaretToEnd(lastchildblock);
-			
-			// If selrange starts before or at block, set startblock to the first child ghostblock
-			if (selrange.compareEndPoints("StartToStart", startofblock) !== 1) {
-				atverystart = true;
-				startblock = firstchildblock;
-			}
-			// Otherwise, set child ghostblock containing the start of the selection
-			else {
-				startblock = selrange.getStartNode();
-				if (!ghostedit.dom.isGhostBlock(startblock)) startblock = ghostedit.dom.getParentGhostBlock(startblock);
-			}
-			
-			// If selrange ends after or at block, set endblock to the last child ghostblock
-			if (selrange.compareEndPoints("EndToEnd", endofblock) !== -1) {
-				atveryend = true;
-				endblock = lastchildblock;
-			}
-			// Otherwise, set child ghostblock containing the end of the selection
-			else {
-				endblock = selrange.getEndNode();
-				if (!ghostedit.dom.isGhostBlock(endblock)) endblock = ghostedit.dom.getParentGhostBlock(endblock);
-			}
-			
-			startcblock = startblock;
-			while(!ghostedit.dom.isChildGhostBlock(startcblock, container)) startcblock = ghostedit.dom.getParentGhostBlock(startcblock);
-			endcblock = endblock;
-			while(!ghostedit.dom.isChildGhostBlock(endcblock, container)) endcblock = ghostedit.dom.getParentGhostBlock(endcblock);
-			
-			//alert(startblock.id + endblock.id);
-					
-			
-			/*//Handle selectall case
-			if (isatverystart && isatveryend) {
-				dodelete = false;
-				firsttextblocktype = textblockelems[i].tagName.toLowerCase();
-				for(i = 0; i < childblocks.length; i += 1) {
-					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false) {
-						firstchildblock = childblocks[i];
-						break;
-					}
-				}
-				lasso().setCaretToStart(firstchildblock).select();
-				return true;
-			}*/
-			
-			//ghostedit.textblock.selection.deleteContents(lastchildblock);
-			
-			//alert("start - " + startblock.id + "\nend - " + endblock.id);
-			
-			// Cycle through SELECTED child ghostblocks and call delete method
-			dodelete = false;
-			for(i = 0; i < childblocks.length; i += 1) {
-				
-				cblock = childblocks[i];
-				if ( !ghostedit.dom.isGhostBlock(cblock) ) continue;
-				handler = cblock.getAttribute("data-ghostedit-handler");
-				
-				if (cblock.id === startcblock.id) {
-					ghostedit.plugins[handler].selection.deleteContents( cblock );
-					dodelete = true;
-					continue;
-				}
-				else if (cblock.id === endcblock.id) {
-					ghostedit.plugins[handler].selection.deleteContents( cblock );
-					dodelete = false;
-					break;
-				}
-				
-				if (dodelete) {
-					container.removeChild(childblocks[i]);
-					i--;
-				}
-					
-			}
-			
-			
-			// If the first and last elements in the selection are the same type, then merge
-			if(startcblock.getAttribute("data-ghostedit-elemtype") === endcblock.getAttribute("data-ghostedit-elemtype")) {
-				ghostedit.plugins[startcblock.getAttribute("data-ghostedit-elemtype")].merge(startcblock, endcblock, collapse);
-				if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
-				//^^tests whether endcblock is still in the document, i.e. whether a merge took place
-			}
-			
-			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.editdiv.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
-				dummynode = document.getElementById('ghostedit_dummynode');
-				lasso().selectNodeContents(dummynode).select();*/
-				container.appendChild(ghostedit.textblock.create("p"));
-			}
-			
-			// Place caret where the selection was
-			//lasso().setCaretToStart(endelem).select();
-
-			return true;
-		}
-	}
-	
-	_container.inout = {
-		importHTML: function (sourcenode) {
-			var container, handler, result, i, elemcount;
-			if (!sourcenode || sourcenode.childNodes.length < 1) return false;
-			
-			container = _container.create();
-			
-			// For each source child node, check if appropriate import handler exists, if so then call it on the node
-			for (i = 0; i < sourcenode.childNodes.length; i += 1) {
-				elem = sourcenode.childNodes[i];
-				//console.log("container import");
-				//console.log(elem.childNodes.length);
-				if (elem.nodeType !== 1 && elem.nodeType !== 3)  continue;
-				
-				tagname = (elem.nodeType === 3) ? "#textnode" : elem.tagName.toLowerCase();
-				/*if (handler = ghostedit.inout.importhandlers[tagname]) {
-					result = ghostedit.plugins[handler].inout.importHTML(elem)
-					if (result && ghostedit.dom.isGhostBlock(result)) {
-						container.appendChild(result);
-					}
-				}*/
-				if (ghostedit.inout.importhandlers[tagname]) {
-					result = ghostedit.inout.importhandlers[tagname].call(this, elem);
-					if (result && ghostedit.dom.isGhostBlock(result)) {
-						container.appendChild(result);
-					}
-				}
-				else if (elem.childNodes.length > 0) {
-					elemcount = elem.childNodes.length;
-					elem.parentNode.insertBefore(ghostedit.dom.extractContent(elem), elem);
-					elem.parentNode.removeChild(elem);
-					i -= 1;
-				}
-			}
-			
-			// Check any GhostBlock children have been added, else add empty paragraph
-			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				container.appendChild(ghostedit.plugins.textblock.create("p"));
-			}
-			
-			return container;
-		},
-		
-		exportHTML: function (target, includeself) { // Shouldn't be used without first using export prepare functions
-			if (!target || !ghostedit.dom.isGhostBlock(target) || target.getAttribute("data-ghostedit-elemtype") !== "container") return false;
-			var i = 0, elem, code, finalCode = "", params, handleResult, blockcount = 0, snippet, handler, isrootnode = false;
-			
-			//if (target.getAttribute("data-ghostedit-isrootnode") === true) isrootnode = true;
-			
-			// Allows for inclusion of enclosing <div> if wanted in future, may also want to retreieve properties
-			//if (includeself === true) finalCode =+ "<div>";
-			
-			for (i = 0; i < target.childNodes.length; i += 1) {
-				elem = ghostedit.dom.isGhostBlock( target.childNodes[i] ) ? target.childNodes[i] : false;
-				if (!elem) continue;
-				
-				handler = elem.getAttribute("data-ghostedit-handler");
-				if (!handler || !ghostedit.plugins[handler]) continue;
-				
-				blockreturn = ghostedit.plugins[handler].inout.exportHTML(elem);
-				
-				if (blockreturn) {
-					finalCode += blockreturn.content;
-					blockcount ++;
-				}
-				
-				//Create snippet from first 3 paragraphs
-				if (blockcount <= 3){
-					snippet = finalCode;
-				}
-			}
-			
-			return {content: finalCode, snippet: snippet};
-		}
-	}
-	
-	_container.paste = {
-		handle: function (target, source, position) {
-			var sel, anchor, newnode, dummy;
-			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return true;
-			if(position.isfirst || position.islast) return false;
-			
-			//DEV console.log("container paste handle");
-			
-			sel = ghostedit.selection.saved.data;
-			anchor = sel.clone().collapseToStart().getParentElement();
-			sel.saveToDOM("ghostedit_paste_start");
-			
-			if (anchor === target) {
-				/* Just use range marker as dummy elem
-				dummy = document.createElement("span");
-				dummy.innerHTML = "&#x200b";
-				dummy.id = "ghostedit_paste_dummy";
-				sel.clone().collapseToStart().insertNode(dummy);*/
-				dummy = document.getElementById("ghostedit_paste_start_range_start");
-				anchor = ghostedit.dom.getPreviousSiblingGhostBlock(dummy) || dummy;
-			}
-			
-			while (anchor.parentNode !== target) {
-				anchor = anchor.parentNode;
-				if (anchor === null || !anchor.parentNode) return true;
-			}
-
-			newnode = source.cloneNode(true);
-			/*if (position.islast) {
-				sel.removeDOMmarkers("ghostedit_paste");
-				newnode.innerHTML = "<span id='ghostedit_paste_range_end'>&#x200b;</span>" + newnode.innerHTML;
-			}
-			else {
-				document.getElementById("ghostedit_paste_range_start").parentNode.removeChild(document.getElementById("ghostedit_paste_range_start"));
-			}*/
-			lasso().removeDOMmarkers("ghostedit_paste_start");
-			newnode.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t3'>&#x200b;</span>";
-			
-			_container.dom.addchild(target, "after", anchor, newnode);
-			
-			if (dummy && dummy.parentNode) dummy.parentNode.removeChild(dummy);
-			return true;
-			
-		}
-	}
-	
-	_container.isChildGhostBlock = function (elem, childblocks) {
-		//alert(arguments.length);
-		if (!elem) return false;
-		if (elem.nodeType != 1) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
-		for(i = 0; i < childblocks.length; i += 1) {
-			if (elem === childblocks[i]) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	_container.create = function () {
-		// Create element, and assign id and content
-		newElem = document.createElement("div");
-		ghostedit.blockElemId += 1;
-		newElem.id = "ghostedit_container_" + ghostedit.blockElemId;
-		
-		// Set GhostEdit handler attributes
-		newElem.setAttribute("data-ghostedit-iselem", "true");
-		newElem.setAttribute("data-ghostedit-elemtype", "container");
-		newElem.setAttribute("data-ghostedit-handler", "container");
-		
-		return newElem;
-	}
-	
-	_container.focus = function (target) {
-		var firstchild, handler;
-		if (!target || target.nodeType !== 1 || target.getAttribute("data-ghostedit-elemtype") !== "container") return false;
-		
-		// Get first child of container
-		firstchild = ghostedit.dom.getFirstChildGhostBlock (target);
-		if (!firstchild) return false;
-		
-		handler = firstchild.getAttribute("data-ghostedit-handler");
-		ghostedit.plugins[handler].focus(firstchild);
-		
-		return true;
-	}
-	
-	ghostedit.api.plugin.register("container", _container);
-})(window);
-(function (window, undefined) {
-	
-	var _clipboard = {};
-	
-	_clipboard.init = function () {
-		_clipboard.paste.init();
-		_clipboard.cut.init();
-	};
-	
-	_paste = {
-		savedcontent: null,
-		savedundodata: null,
-		savedundopoint: null,
-		beforerangedata: "",
-		afterrangedata: "",
-		waitlength: 0,
-		postpastetidylist: []
-	};
-	
-	_paste.init = function () {
-		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "paste", function(event) { _paste.handle(event); });
-		}, "clipboard");
-	}
-	
-	_paste.handle = function (e) {//elem no longer used?
-		
-		// Save editor state, and save undo data in case paste functions mess up undo stack
-		ghostedit.history.saveUndoState();
-		_paste.savedundodata = ghostedit.history.undoData;
-		_paste.savedundopoint = ghostedit.history.undoPoint;
-
-		_paste.triedpasteimage = false;
-		// If webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
-		if (e.clipboardData && e.clipboardData.getData) {
-			if (/image/.test(e.clipboardData.types)) {
-				_paste.triedpasteimage = true;
-			}
-			
-			if (/text\/html/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/html');
-			}
-			else if (/text\/plain/.test(e.clipboardData.types)) {
-				ghostedit.editdiv.innerHTML = e.clipboardData.getData('text/plain').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-			}
-			else {
-				ghostedit.editdiv.innerHTML = "";
-			}
-			_paste.waitfordata();
-			return ghostedit.util.cancelEvent(e);
-		}
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
-		else {
-			ghostedit.editdiv.innerHTML = "";
-			_paste.waitfordata();
-			return true;
-		}
-	};
-	
-	_paste.waitfordata = function () {
-		var elem = ghostedit.editdiv;
-		if (elem.childNodes && elem.childNodes.length > 0) {
-			_paste.process();
-		}
-		else {
-			setTimeout(_paste.waitfordata, 20);
-		}
-	};
-	
-	_paste.process = function () {
-		var elem, elems, caretelemtype, isfirstelem, i, j, currentelem, currentelemtype, subelem, appenddata = "";
-		var newelems, nodetagtype, nodelist = "", insertelem, previnsertelem, nextelem, tempelem, images, handler, target, result, source, nodepos, position;
-		var blocks, range, child, index, block;
-		var pastenode, collapsed;
-		
-		// Extract pasted content into a new element
-		pastenode = document.createElement("div");
-		console.log("raw paste content");
-		console.log (ghostedit.editdiv.cloneNode(true));
-		pastenode = ghostedit.plugins.container.inout.importHTML(ghostedit.editdiv);
-		console.log ("processed content");
-		console.log (pastenode.innerHTML);
-		
-		// Restore undo data, and restore editor content
-		ghostedit.history.undoData = _paste.savedundodata;
-		ghostedit.history.undoPoint = _paste.savedundopoint;
-		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
-		
-		console.log(ghostedit.selection.saved);
-		// Delete selection contents if selection is non-collapsed
-		ghostedit.selection.deleteContents();
-		ghostedit.selection.save();
-		
-		console.log(pastenode);
-		
-		// If no content was pasted, return
-		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
-		if (!source) return;
-		if(ghostedit.selection.saved.data.isCollapsed()){
-			collapsed = true;
-			ghostedit.selection.saved.data.saveToDOM("ghostedit_paste_start");
-		}
-		else {
-			collapsed = false;
-			ghostedit.selection.saved.data.clone().collapseToStart().saveToDOM("ghostedit_paste_start");
-			ghostedit.selection.saved.data.clone().collapseToEnd().saveToDOM("ghostedit_paste_end");
-		}
-		
-		
-		console.log("test--------------------------------");
-		// Call handler on first pasted node
-		result = false;
-		_paste.trycounter = 0;
-		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-		target = ghostedit.selection.saved.data.getParentNode();
-		if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
-		while (!result) {
-			if (!target) break;
-			
-			handler = target.getAttribute("data-ghostedit-handler");
-			if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
-			
-			position = {"isfirst": true,
-				"islast": (ghostedit.dom.getFirstChildGhostBlock(pastenode) === source) ? true : false,
-				"collapsed": collapsed};
-			
-			console.log("Call handler: (first)" + handler);
-			console.log(source);
-			result = ghostedit.plugins[handler].paste.handle (target, source, position);
-			if (!result) target = ghostedit.dom.getParentGhostBlock(target);
-			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-			console.log("result: " + result);
-		}
-		source.parentNode.removeChild(source);
-
-		
-		// Call handler on last pasted node
-		source = ghostedit.dom.getLastChildGhostBlock(pastenode);
-		if (source) {
-			_paste.trycounter = 0;
-			result = false;
-			
-			if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
-				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
-			}
-			else {
-				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-			}
-			target = ghostedit.selection.saved.data.getParentNode();
-			if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
-			
-			while (!result) {
-				
-				//ghostedit.selection.saved.data.select();
-				if (!target) break;
-				
-				handler = target.getAttribute("data-ghostedit-handler");
-				if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
-
-				console.log("Call handler (last): " + handler);
-				console.log(source);
-				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": true, "collapsed": collapsed});
-				if (!result) target = ghostedit.dom.getParentGhostBlock(target);
-				if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
-					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
-				}
-				else {
-					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-				}
-				console.log("result: " + result);
-				if (_paste.trycounter++ > 20) return;
-			}
-			source.parentNode.removeChild(source);
-		}
-		
-		/*// Loop through remaining nodes
-		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
-		_paste.trycounter = 0;
-		while (source) {
-			result = false;
-			while (!result) {
-				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-				if (lasso().isSavedRange("ghostedit_paste_end")) {
-					ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
-				}
-				ghostedit.selection.saved.data.select();
-				return;
-				
-				target = ghostedit.selection.saved.data.getParentNode();
-				if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
-				if (!target) break;
-				
-				handler = target.getAttribute("data-ghostedit-handler");
-				if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
-
-				console.log("Call handler: " + handler);
-				console.log(source);
-				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": false, "collapsed": collapsed});
-				console.log("result: " + result);
-				if (_paste.trycounter++ > 20) return;
-			}
-			
-			source = ghostedit.dom.getNextSiblingGhostBlock(source);
-		};*/
-		
-
-		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", true).select();
-		if (ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
-			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", true).select();
-		}
-
-		/*if (!result) {
-			i--;
-			blocks = ghostedit.plugins[handler].split(target);
-			//range = lasso().setStartToRangeStart(lasso().selectNodeContents(blocks.block1));
-			//range.setEndToRangeEnd(lasso().selectNodeContents(blocks.block2));
-			//elem = range.getParentNode();
-			//if (!ghostedit.dom.isGhostBlock(elem)) ghostedit.dom.getParentGhostBlock(elem);
-			target = ghostedit.dom.getParentGhostBlock(blocks.block1);
-			child = blocks.block1;
-			while (!ghostedit.dom.isChildGhostBlock(child, target)) {
-				child = ghostedit.dom.getParentGhostBlock(child);
-			}
-			handler = target.getAttribute("data-ghostedit-handler");
-		}*/
-		
-		ghostedit.selection.save();
-		
-		ghostedit.event.trigger("postpaste");
-		
-		ghostedit.history.undoData = _paste.savedundodata;
-		ghostedit.history.undoPoint = _paste.savedundopoint;
-		ghostedit.history.saveUndoState();
-		
-		if (_paste.triedpasteimage) {
-			ghostedit.ui.message.show("You cannot paste images into the editor, please use the add image button instead", 2, "warn");
-			ghostedit.event.trigger("ui:message", {message: "You cannot paste images into the editor, please use the add image button instead", time: 2, color: "warn"});
-		}
-	};
-	
-	_cut = {
-		savedcontent: null,
-		savedundodata: null,
-		savedundopoint: null
-	};
-	
-	_cut.init = function () {
-		ghostedit.event.addListener("init:after", function () {
-			ghostedit.util.addEvent(ghostedit.editdiv, "cut", function(event) { _cut.handle(event); });
-		}, "clipboard");
-	}
-	
-	_cut.handle = function (e) {
-		
-		// Save editor state, and save undo data in case paste functions mess up undo stack
-		ghostedit.history.saveUndoState();
-		_cut.savedundodata = ghostedit.history.undoData;
-		_cut.savedundopoint = ghostedit.history.undoPoint;
-
-		//Else - empty editdiv and allow browser to paste content into it, then cleanup
-		setTimeout(_cut.cleanup, 20);
-		return true;
-	};
-	
-	_cut.cleanup = function () {
-
-		// Restore undo data, and restore editor content
-		ghostedit.history.undoData = _cut.savedundodata;
-		ghostedit.history.undoPoint = _cut.savedundopoint;
-		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
-		
-		// Delete selection contents if selection is non-collapsed
-		ghostedit.selection.deleteContents();
-		ghostedit.selection.save();
-		ghostedit.history.saveUndoState();
-	};
-	
-	_clipboard.paste = _paste;
-	_clipboard.cut = _cut;
-	window.ghostedit.clipboard = _clipboard;
-})(window);
-(function(window, undefined) {
-	
-	var _dom = {};
-	
-	_dom.getNodeOffset = function (node) {
-		var offset, nodelist;
-		
-		if (!node || !node.parentNode) return;
-		
-		offset = 0;
-		nodelist = node.parentNode.childNodes;
-		
-		while (nodelist[offset] !== node) {
-			offset += 1;
-		}
-		return offset;
-	};
-
-	_dom.extractContent = function (node) {
-		var frag = document.createDocumentFragment(), child;
-		while ( (child = node.firstChild) ) {
-			frag.appendChild(child);
-		}
-		return frag;
-	};
-
-	_dom.cloneContent = function (node) {
-		var frag = document.createDocumentFragment(), child;
-		for (i = 0; i < node.childNodes.length; i++) {
-			child = node.childNodes[i];
-			frag.appendChild(child.cloneNode(true));
-		}
-		return frag;
-	};
-
-	_dom.parse = function (node, rules) {
-		var parsednode = false, nodes, parsedchild, nodetype, i, j, value, text, tagname, tagrules, attribute, style;
-		if (!node || !rules || !node.nodeType) return false;
-		
-		rules.textnode = rules.textnode || {};
-		rules.tags = rules.tags || {};
-		
-		// Handle textnodes
-		if (node.nodeType === 3) {
-			text = (rules.textnode.clean) ? node.nodeValue.replace(/[\n\r\t]/g,"") : node.nodeValue;
-			return (text.length > 0) ? document.createTextNode(text) : false;
-		}
-		
-		// Handle not-element case (textnodes already handled)
-		if (node.nodeType !== 1) return false;
-		
-		// Get rules for tag, if none default to content only
-		tagname = node.tagName.toLowerCase();
-		tagrules = {"contentsonly": true};
-		if (rules.tags[tagname]) {
-			tagrules = rules.tags[tagname];
-			if (typeof tagrules.template === "string") tagrules = tagrules.template;
-			if (typeof tagrules === "string" && rules.templates[tagrules]) tagrules = rules.templates[tagrules];
-			if (typeof tagrules === "string") return false;
-		}
-		
-		
-		// If "contentsonly" flag set, create document fragment, else create element of same type as node
-		parsednode = tagrules.contentsonly ? document.createDocumentFragment() : document.createElement(node.tagName.toLowerCase());
-		
-		// Unless "ignorechildren" flag set, recurse on children
-		if (!tagrules.ignorechildren) {
-			nodes = node.childNodes;
-			for (i = 0; i < nodes.length; i++) {
-				if (parsedchild = _dom.parse(nodes[i], rules)) {
-					parsednode.appendChild(parsedchild);
-				}
-			}
-		}
-		
-		// Return here if contents only (no need to copy attributes if no node to copy to)
-		if (tagrules.contentsonly) return (parsednode.childNodes.length > 0) ? parsednode : false;
-		
-		// If attributes specified, copy specified attributes
-		if (tagrules.attributes) {
-			for (i = 0; i < tagrules.attributes.length; i++) {
-				attribute = tagrules.attributes[i];
-				
-				// Handle simple (no rules) case
-				if (typeof attribute === "string") { attribute = {"name": attribute} }
-				
-				// Get value of attribute on source node
-				if (typeof attribute.name !== "string") break;
-				value  = attribute.value || (attribute.name === "class") ? node.className : node.getAttribute(attribute.name);
-				if (value === undefined) break;
-				attribute.copy = true;
-				
-				// If allowedvalues are specified, check if value is correct
-				if (attribute.allowedvalues) {
-					attribute.copy = false;
-					for (j = 0; j < attribute.allowedvalues.length; j++) {
-						if (attribute.allowedvalues[i] === value){
-							attribute.copy = true;
-							break;
-						}
-					}
-				}
-				
-				// If all checks passed, set attribute on new node
-				if (attribute.copy) {
-					if (attribute.name === "class") {
-						parsednode.className = value;
-					}
-					else {
-						parsednode.setAttribute(attribute.name, value);
-					}
-				}
-			}
-		}
-		
-		
-		// If styles specified, copy specified attributes
-		if (tagrules.styles) {
-			for (i = 0; i < tagrules.styles.length; i++) {
-				style = tagrules.styles[i];
-				
-				// Handle simple (no rules) case
-				if (typeof style === "string") { style = {"name": style} };
-				
-				// Get value of style on source node
-				if (typeof style.name !== "string") break;
-				if (style.name === "float") style.name = (node.style["cssFloat"]) ? "cssFloat" : "styleFloat";
-				value  = style.value || node.style[style.name];
-				if (value === undefined) break;
-				style.copy = true;
-				
-				// If allowedvalues are specified, check if value is correct
-				if (style.allowedvalues) {
-					style.copy = false;
-					for (j = 0; j < style.allowedvalues.length; j++) {
-						if (style.allowedvalues[j] === value) {
-							style.copy = true;
-							break;
-						}
-					}
-				}
-				
-				// If all checks passed, set style on new node
-				if (style.copy) parsednode.style[style.name] = value;
-			}
-		}
-		
-		return parsednode;
-	};
-
-	_dom./*compareNodes = function (node1, node2) {
-		var node;
-		
-		// If node1 is a documentFragment, wrap in an element
-		if (n1.nodeType === 11) {
-			node = document.createElement("div");
-			node.appendChild(nodeOrFrag);
-			node1 = node;
-		}
-		
-		// If node2 is a documentFragment, wrap in an element
-		if (n2.nodeType === 11) {
-			node = document.createElement("div");
-			node.appendChild(nodeOrFrag);
-			node2 = node;
-		}
-		
-		function getNextNode (nodelist, current) {
-			
-		}
-		
-		nodes1 = node1.getElementsByTagName(*);
-		
-		
-	},*/
-	
-	isGhostBlock = function (node) {
-		if (!node || !node.nodeType || node.nodeType !== 1) return false;
-		
-		var ghosttype = node.getAttribute("data-ghostedit-elemtype");
-		
-		return (ghosttype !== undefined && ghosttype !== false && ghosttype !== null) ? true : false; 
-	};
-
-	_dom.isChildGhostBlock = function (elem, parent) {
-		if (!elem || !parent || !parent.childNodes) return false;
-		if (elem.nodeType != 1) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
-		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
-		var childblocks = parent.childNodes;
-		for(i = 0; i < childblocks.length; i += 1) {
-			if (elem === childblocks[i]) {
-				return true;
-			}
-		}
-		return false;
-	};
-
-	_dom.isGhostToplevel = function (node) {
-		return (node && node.getAttribute("data-ghostedit-isrootnode") === true) ? true : false;
-	};
-
-	_dom.getParentGhostBlock = function (node) {
-		
-		if (!node) return false;
-		
-		do {
-			node = node.parentNode;
-			if (node == null) return false;
-		}
-		while (!_dom.isGhostBlock(node));
-		
-		return node;
-	};
-
-	_dom.getFirstChildGhostBlock = function (node) {
-		var children;
-		
-		if (!node || !node.childNodes) return false;			
-		
-		// Otherwise, recurse forwards through DOM until first GhostBlock is found.
-		children = node.childNodes;
-		
-		for (i = 0; i < children.length; i += 1) {
-			if (_dom.isGhostBlock(children[i])) {
-				return children[i];
-			}
-		}
-		
-		return false;
-	};
-
-	_dom.getLastChildGhostBlock = function (node) {
-		var children;
-		
-		if (!node || !node.childNodes) return false;			
-		
-		// Otherwise, recurse backwards through DOM until previous GhostBlock is found.
-		children = node.childNodes;
-		
-		for (i = children.length -1; i >= 0; i -= 1) {
-			if (_dom.isGhostBlock(children[i])) {
-				return children[i];
-			}
-		}
-		
-		return false;
-	};
-
-	_dom.getPreviousSiblingGhostBlock = function (node) {
-		var parent, offset, siblings;
-		
-		if (!node || !node.parentNode) return false;			
-		
-		// Otherwise, recurse backwards through DOM until previous GhostBlock is found.
-		parent = node.parentNode;
-		offset = _dom.getNodeOffset (node) - 1;
-		siblings = parent.childNodes;
-		
-		do {
-			if (_dom.isGhostBlock(siblings[offset]) === true)  {
-				return siblings[offset];
-			}
-			offset -= 1;
-		}
-		while (offset >= 0);
-		
-		return false;
-	};
-
-	_dom.getNextSiblingGhostBlock = function (node) {
-		var parent, offset, siblings;
-		
-		if (!node || !node.parentNode) return false;			
-		
-		// Otherwise, recurse forwards through DOM until next GhostBlock is found.
-		parent = node.parentNode;
-		offset = _dom.getNodeOffset (node) + 1;
-		siblings = parent.childNodes;
-		
-		do {
-			if (_dom.isGhostBlock(siblings[offset]) === true)  {
-				return siblings[offset];
-			}
-			offset += 1;
-		}
-		while (offset < siblings.length);
-		
-		return false;
-	};
-
-	_dom.getParentElement = function (node) {
-		if (node.nodeType != 1) {
-			while (node.nodeType != 1) {
-				node = node.parentNode;
-				if (node == null) return null;
-			}
-		}
-		return node;
-	};
-
-	_dom.isDescendant = function (parent, child) {
-	     var node = child.parentNode;
-	     while (node != null) {
-	         if (node == parent) {
-	             return true;
-	         }
-	         node = node.parentNode;
-	     }
-	     return false;
-	};
-
-	_dom.getFirstChildElement = function (node) {
-		var children;
-		
-		if (!node || !node.childNodes) return false;			
-		
-		// Otherwise, recurse forwards through DOM until next element is found.
-		children = node.childNodes;
-		
-		for (i = 0; i < children.length; i += 1) {
-			if (children[i].nodeType === 1) {
-				return children[i];
-			}
-		}
-		
-		return false;
-	};
-
-	_dom.getCertainParent = function (condition, elem) {
-		var args = [].slice.call(arguments);
-		args.shift();
-		if (!condition.apply(this, args)) {
-			while (!condition.apply(this, args)) {
-				elem = elem.parentNode;
-				args[0] = elem;
-				if (elem == null) return false;
-			}
-		}
-		return elem;
-	};
-	
-	window.ghostedit.dom = _dom;
-})(window);
-(function(window, undefined) {
-	
-	var _event = {
-		listeners: [],
-		listenerid: 0,
-		eventtypes: [],
-		cancelKeypress: false, //allows onkeypress event to be cancelled from onkeydown event.
-	};
-		
-	_event.keydown = function (elem,e) { //allows deleteIfBlank() to fire (doesn't work on onkeypress except in firefox)
-		var keycode, ghostblock, handler, handled;
-		ghostedit.selection.save(false);
-		
-		e = !(e && e.istest) && window.event != null ? window.event : e;
-		keycode = e.keyCode != null ? e.keyCode : e.charCode;
-		
-		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
-		
-		// Global shortcuts
-		switch(keycode) {
-			case 8: //backspace
-			case 46: // delete key
-				cancelKeypress = false;
-				if(ghostedit.selection.savedRange.isCollapsed() === false) {
-					ghostedit.history.saveUndoState();
-					
-					ghostedit.selection.deleteContents( (keycode === 8) ? "collapsetostart" : "collapsetoend" );
-					
-					ghostedit.history.saveUndoState();
-					_event.cancelKeypress = true;//otherwise opera fires default backspace event onkeyPRESS (not onkeyDOWN)
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 83: //ctrl-s
-				if (e.ctrlKey){
-					ghostedit.api.save();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 66: //ctrl-b
-				if (e.ctrlKey) {
-					ghostedit.textblock.format.bold ();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 73: //ctrl-i
-				if (e.ctrlKey && !e.shiftKey) {
-					ghostedit.textblock.format.italic ();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 85: //ctrl-u
-				if (e.ctrlKey) {
-					ghostedit.textblock.format.underline ();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 90: //ctrl-z
-				if (e.ctrlKey) {
-					ghostedit.history.undo ();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 89: //ctrl-y
-				if (e.ctrlKey) {
-					ghostedit.history.redo ();
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-		}
-		
-		// Not handled by one of above, pass to plugin keydown handlers
-		ghostblock = ghostedit.selection.getContainingGhostBlock();
-		while (true) {
-			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keydown", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
-			
-			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
-			if (!ghostblock) break;
-		}
-		
-		ghostedit.selection.save();
-		return true;
-	};
-
-	_event.keypress = function (elem,e) {
-		var keycode, ghostblock, handler, handled, currentDocLen, savedDocLen;
-		ghostedit.selection.save();
-		
-		currentDocLen = ghostedit.editdiv.innerHTML.length;
-		savedDocLen = ghostedit.history.undoData[ghostedit.history.undoPoint] !== undefined ? ghostedit.history.undoData[ghostedit.history.undoPoint].content.string.length : 0;
-		//if (currentDocLen - savedDocLen >= 20 || savedDocLen - currentDocLen >= 20) ghostedit.history.saveUndoState();
-		
-		e = !(e && e.istest) && window.event != null ? window.event : e;
-		keycode = e.keyCode != null ? e.keyCode : e.charCode;
-		
-		_event.trigger("input:keydown", {"event": event, "keycode": keycode});
-		
-		if (ghostedit.selection.saved.type !== "none" && !ghostedit.selection.savedRange.isCollapsed() && !e.ctrlKey) {
-			ghostedit.selection.deleteContents();
-		}
-		
-		
-		// Global keyevents
-		switch(keycode) {
-			case 8: //cancel backspace event in opera if cancelKeypress = true
-				if (_event.cancelKeypress == true) {
-					_event.cancelKeypress = false;
-					return ghostedit.util.cancelEvent ( e );
-				}
-			break;
-			case 13: // Enter (don't allow default action for enter to happen)
-				ghostedit.util.cancelEvent ( e );
-			break;
-		}
-		
-		ghostblock = ghostedit.selection.getContainingGhostBlock();
-		while (true) {
-			handler = ghostblock.getAttribute("data-ghostedit-handler");
-			handled = ghostedit.plugins[handler].ghostevent("keypress", ghostblock, "self", {"keycode": keycode, "event": e});
-			if (handled === true) break;
-			
-			ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
-			if (!ghostblock) break;
-		}
-		
-		
-		ghostedit.selection.save();
-		return true;
-	};
-
-	_event.addListener = function (event, callback, revokekey) {
-		var listeners, eventtypes, isnewevent, i;
-		if (typeof(callback) !== "function") return false;
-		
-		// Check if array for that event needs to be created
-		listeners = _event.listeners;
-		if (!listeners[event] || !typeof(listeners[event]) === "object" || !(listeners[event] instanceof Array)) {
-			listeners[event] = [];
-		}
-		
-		// Add event to list of events
-		eventtypes = _event.eventtypes;
-		isnewevent = true;
-		for (i = 0; i < eventtypes.length; i++) {
-			if (eventtypes[i] === event) {
-				isnewevent = false;
-				break;
-			}
-		}
-		if (isnewevent) eventtypes.push(event);
-		
-		_event.listenerid++;
-		listeners[event].push({"id": _event.listenerid, "callback": callback, "revokekey": revokekey});
-		return _event.listenerid;
-	};
-
-	_event.removeListener = function (event, listenerid) {
-		var listeners = _event.listeners, i, newlist = [];
-		
-		if(!listeners[event]) return;
-		
-		for (i = 0; i < listeners[event].length; i++) {
-			if (listeners[event].id !== listenerid) {
-				newlist.push(listeners[event][i]);
-			}
-		}
-		
-		listeners[event] = newlist;
-	};
-
-	_event.removeAllListeners = function (revokekey) {
-		var listeners, eventtypes, event, i, j, newlist = [];
-		if(!revokekey) return;
-		
-		listeners = _event.listeners;
-		eventtypes = _event.eventtypes;
-		
-		for (i = 0; i < eventtypes.length; i++) {
-			event = eventtypes[i];
-			for (j = 0; j < listeners[event].length; j++) {
-				if(!listeners[event][j].revokekey || listeners[event][j].revokekey !== revokekey) {
-					newlist.push(listeners[event][j]);
-				}
-			}
-			listeners[event] = ghostedit.util.cloneObject(newlist);
-			newlist = [];
-		}
-	};
-
-	_event.trigger = function (event, params) {
-		var listeners = _event.listeners, i;
-		if (params === undefined) params = {};
-		if (!listeners[event] || !typeof(listeners[event]) === "object" || !(listeners[event] instanceof Array)) return;
-		
-		if (ghostedit.debug) {
-			console.log(event);
-			console.log(params);
-		}
-		
-		for (i = 0; i < listeners[event].length; i++) {
-			listeners[event][i].callback.call(this, params);
-		}
-	};
-
-	_event.sendBackwards = function (eventtype, source, params) {
-		var target = false, tracker, handler, handled = false, result;
-		if (!params) params = {};
-		if (!ghostedit.dom.isGhostBlock(source)) return false;
-		
-		tracker = source; //tracks currently tried targets
-		
-		while(true) {
-			
-			if (target = ghostedit.dom.getPreviousSiblingGhostBlock(tracker)) {
-				direction = "ahead";
-			}
-			else if (target = ghostedit.dom.getParentGhostBlock(tracker)) {
-				direction = "top";
-			}
-			
-			//alert("source - " + source.id + "\ntarget - " + target.id);
-			
-			result = _event.send (eventtype, target, direction, params);
-			
-			//if (result) alert("source - " + source.id + "\ntarget - " + target.id + "\nresult - " + result.handled);
-			//else alert("source - " + source.id + "\ntarget - " + target.id + "\nresult - false");
-			
-			if (!result) return false;
-			else if (result.handled === true) return true;
-			
-			tracker = target;
-		}
-	};
-
-	_event.sendForwards = function (eventtype, source, params) {
-		var target = false, tracker, handler, handled = false, result, direction;
-		if (!params) params = {};
-		if (!ghostedit.dom.isGhostBlock(source)) return false;
-		
-		tracker = source; //tracks currently tried targets
-		
-		while(true) {
-			
-			if (target = ghostedit.dom.getNextSiblingGhostBlock(tracker)) {
-				direction = "behind";
-			}
-			else if (target = ghostedit.dom.getParentGhostBlock(tracker)) {
-				direction = "bottom";
-			}
-			
-			if ( !(result = _event.send (eventtype, target, direction, params)) ) return false;
-			else if (result.handled === true) return true;
-			
-			tracker = target;
-		}
-	};
-
-	_event.send = function (eventtype, target, fromdirection, params) {
-		var handler, handled;
-
-		if (!target) return false; // = no previous/next GhostBlock
-
-		handler = target.getAttribute("data-ghostedit-handler");
-		if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].ghostevent) return false; // = no handler for this elemtype
-		
-		handled = ghostedit.plugins[handler].ghostevent (eventtype, target, fromdirection, params);
-
-		return {"handled": handled};
-		
-	};
-	
-	window.ghostedit.event = _event;
-})(window);
-(function(window, undefined) {
-	
-	var _history = {}
-	
-	_history.init = function () {
-		// Set initial variables
-		_history.reset();
-		
-		// Add listener to check whether the selection has changed since the last undo save
-		ghostedit.event.addListener("selection:change", function () {_history.selectionchanged = true});
-		
-		// Export undo and redo function to the api
-		ghostedit.api.undo = function () { return _history.undo(); }
-		ghostedit.api.redo = function () { return _history.redo(); }
-	};
-	
-	_history.reset = function () {
-		_history.undoData = [];//new Array(_history.undolevels);
-		/*_history.undolevels = 4000,*/
-		_history.undoPoint = 0;
-		_history.selectionchanged = true;
-	};
-	
-	_history.saveUndoState = function (force) {
-		var tempImg = null, i, j, editwrap = ghostedit.editdiv, tempArr, undoPoint, undoData, savedcontent = "", savedselcontent = "", currrentcontent;
-		var contentchanged, selectionchanged, currentstate, undostate;
-		if (force !== true) force = false;
-		
-		ghostedit.event.trigger("presaveundostate");
-		
-		// Localise undo variables
-		undoPoint = _history.undoPoint;
-		undoData = _history.undoData;
-		
-		// Get latest undopoint into a variable
-		undostate = undoData[undoPoint];
-		if (!undostate) force = true;
-		
-		// Start capturing current editor state
-		currentstate = {
-			selection: {
-				"type": ghostedit.selection.saved.type,
-				//"data": ghostedit.selection.saved.type === "textblock" ? ghostedit.selection.saved.data.clone() : ghostedit.selection.saved.data
-				"data": ghostedit.selection.saved.data
-			},
-			content: {
-				"string": editwrap.innerHTML
-			}
-		};
-		
-		// Calcuate whether the selection or content have changed
-		if (!force) {
-			contentchanged = !!(undostate.content.string !== currentstate.content.string);
-			selectionchanged = !(ghostedit.selection.isSameAs(undostate.selection));
-		}
-		
-		if (force || selectionchanged || contentchanged) {
-			
-			// Clone editor content as documentFragment
-			currentstate.content.dom = ghostedit.dom.extractContent(editwrap.cloneNode(true));
-			
-			if (force || contentchanged) {
-				// Remove existing redo data
-				if (undoPoint > 0) _history.undoData.splice(0, undoPoint);
-				// Save new data and set undoPoint to point at it
-				_history.undoData.unshift(currentstate);
-				_history.undoPoint = 0;
-			
-			}
-			else {
-				_history.undoData[undoPoint] = currentstate;
-			}
-			
-		}
-		
-		ghostedit.event.trigger("postsaveundostate");
-	};
-	
-	_history.restoreUndoPoint = function (undopoint) {
-		var undoData = _history.undoData, undostate, content;
-		if(!undoData[undopoint] || undoData[undopoint].content.string.length < 1) return false;
-		undostate = undoData[undopoint];
-		
-		ghostedit.editdiv.innerHTML = "";//undoData[undopoint].selectioncontent;
-		ghostedit.editdiv.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
-		
-		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
-		ghostedit.selection.save();
-	};
-	
-	_history.undo = function () {
-		var undoPoint = _history.undoPoint, undoData = _history.undoData;
-		var editwrap = ghostedit.editdiv,imgs,i;
-		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
-			
-			ghostedit.event.trigger("preundo");
-
-			// There are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
-			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
-				_history.saveUndoState();
-				undoPoint = 1;
-			}
-			// Current state already saved, revert to previous saved one (undoPoint + 1)
-			else {
-				if (undoPoint === 0) {
-					_history.saveUndoState();
-				}
-				undoPoint = _history.undoPoint;
-				undoPoint+=1;
-			}
-			
-			_history.restoreUndoPoint(undoPoint);
-			
-			_history.undoPoint = undoPoint;
-			_history.undoData = undoData;
-
-			ghostedit.event.trigger("postundo");
-		
-		}
-	};
-	
-	_history.redo = function () {
-		var undoPoint = _history.undoPoint, undoData = _history.undoData;
-		var editwrap = ghostedit.editdiv,imgs,i;
-		if (undoPoint > 0 && undoData[undoPoint-1] !== undefined && undoData[undoPoint-1].content.string.length > 0) {
-			
-			ghostedit.event.trigger("preredo");
-			
-			// The user has made changes since the last undo/redo, throw away redo data and save undo state
-			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
-				_history.saveUndoState(true);
-			}
-			// Last action was an undo/redo, move one point forwards if possible
-			else {
-				undoPoint-=1;
-				_history.restoreUndoPoint(undoPoint);
-				_history.undoPoint = undoPoint;
-				_history.undoData = undoData;
-			}
-			
-			ghostedit.event.trigger("postredo");
-		}
-	};
-	
-	window.ghostedit.history = _history;
-})(window);
-(function(window, undefined) {
-	window.ghostedit.init = function (placediv, options) {
-		if (typeof placediv === "string") placediv = document.getElementById(placediv);
-		var wrapdiv, workspace, uilayer, statusbar, elems, i, j, brNode, oldDocRoot, isImg, img, insertedelem, lastelem = false, htmlelem, plugin, handler;
-		
-		// Set up user options
-		ghostedit.options = {};
-		ghostedit.options = options || {};
-		
-		// Check for debug option (but only enable if log module exists)
-		if (ghostedit.options.debug) {
-			ghostedit.debug = true;
-		}
-		
-		// Detect whether we need to add extra br's to work around firefox's bugs (also used for webkit and opera)
-		ghostedit.browserEngine = ghostedit.util.detectEngines();
-		ghostedit.useMozBr = (ghostedit.browserEngine.gecko !== 0 || ghostedit.browserEngine.webkit !== 0 || ghostedit.browserEngine.opera !== 0);
-		
-		//Hide div containing original content
-		placediv.style.display = 'none';
-		//placediv.parentNode.removeChild(placediv);
-		ghostedit.sourceelem = placediv;
-		
-		// Create wrapper div that all other GhostEdit elements go in
-		wrapdiv = document.createElement("div");
-		wrapdiv.className = "ghostedit_wrapper";
-		placediv.parentNode.insertBefore(wrapdiv, placediv);
-		ghostedit.wrapdiv = wrapdiv;
-		
-		// Create workspace wrapper (div that contains editdiv and uilayer)
-		workspace = document.createElement("div");
-		workspace.id = "ghostedit_workspace";
-		workspace.className = "ghostedit_workspace";
-		wrapdiv.appendChild(workspace);
-		ghostedit.workspace = workspace;
-		
-		// Create contextual ui layer
-		uilayer = document.createElement("div");
-		uilayer.id = "ghostedit_uilayer";
-		uilayer.className = "ghostedit_uilayer";
-		uilayer.innerHTML = "<span style='position: absolute; display: none;left: 0; top: 0;line-height: 0'>ie bug fix</span>";
-		workspace.appendChild(uilayer);
-		ghostedit.contextuallayer = uilayer;
-		
-		// If no preview URL specified, then hide the preview button.
-		//if (!options.previewurl) document.getElementById("ghostedit_toolbar_button_preview").style.display = 'none';
-		
-		// Run init events for core modules
-		ghostedit.history.init();
-		ghostedit.inout.init();
-		ghostedit.clipboard.init();
-		
-		// Enable plugins
-		ghostedit.options.plugins = ghostedit.options.plugins || [];
-		ghostedit.options.plugins.unshift("container", "textblock");
-		if (ghostedit.options.plugins) {
-			for (i = 0; i < ghostedit.options.plugins.length; i++) {
-				ghostedit.api.plugin.enable(ghostedit.options.plugins[i]);
-			}
-		}
-		
-		// Send init event to plugins (and core modules)
-		ghostedit.event.trigger("init");
-		
-		// Import initial content
-		ghostedit.editdiv = ghostedit.inout.importHTML(ghostedit.sourceelem);
-		workspace.appendChild(ghostedit.editdiv);
-		
-		// Focus the editor
-		handler = ghostedit.editdiv.getAttribute("data-ghostedit-handler");
-		ghostedit.plugins[handler].focus(ghostedit.editdiv);
-		
-		// Make sure that FF uses tags not CSS, and doesn't show resize handles on images
-		try{document.execCommand("styleWithCSS", false, false);} catch(err){};//makes FF use tags for contenteditable
-		try{document.execCommand("enableObjectResizing", false, false);} catch(err){};//stops resize handles being resizeable in FF
-		
-		// Save selection & setup undo
-		ghostedit.selection.save();
-		ghostedit.history.reset();
-		ghostedit.history.saveUndoState();
-		
-		// Attach event handlers to document
-		htmlelem = document.getElementsByTagName("html")[0];
-		//ghostedit.util.addEvent(htmlelem, "click", ghostedit.selection.clear);
-		ghostedit.util.addEvent(htmlelem, "dragenter", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(htmlelem, "dragleave", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(htmlelem, "dragover", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(htmlelem, "drop", ghostedit.util.cancelEvent);
-		
-		// Attach handlers to wrapdiv
-		ghostedit.util.addEvent(wrapdiv, "click", function( e ) { ghostedit.util.preventBubble(e) } );
-		//ghostedit.util.addEvent(wrapdiv, "mouseup", function( e ) { ghostedit.util.preventBubble(e) } );
-		//ghostedit.util.addEvent(wrapdiv, "mousedown", function( e ) { ghostedit.util.preventBubble(e) } );
-		
-		// Attach handlers to editdiv
-		ghostedit.util.addEvent(ghostedit.editdiv, "click", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "mouseup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keyup", ghostedit.selection.save);
-		ghostedit.util.addEvent(ghostedit.editdiv, "keydown", function(event) {ghostedit.event.keydown(this, event)});
-		ghostedit.util.addEvent(ghostedit.editdiv, "keypress", function(event) {ghostedit.event.keypress(this, event)});
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragenter", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragleave", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "dragover", ghostedit.util.cancelEvent);
-		ghostedit.util.addEvent(ghostedit.editdiv, "drop", ghostedit.util.cancelEvent);
-		
-		// Register UI context event listener 
-		ghostedit.event.addListener ("ui:newcontext", function (params) {
-			ghostedit.uicontext = params.context;
-		});
-		
-		// Focus editdiv
-		ghostedit.editdiv.focus();
-		ghostedit.plugins.container.focus(ghostedit.editdiv);
-		
-		ghostedit.event.trigger("init:after");
-	};
-	
-	var finish = function () {
-		if(ghostedit.active) {
-			ghostedit.active = false;
-			ghostedit.sourceelem.innerHTML = ghostedit.inout.exportHTML().full;
-			ghostedit.wrapdiv.parentNode.removeChild(ghostedit.wrapdiv);
-			ghostedit.selection.savedRange = null;
-			ghostedit.selection.saved = {type: "none", data : null};
-			ghostedit.image.focusedimage = null;
-			ghostedit.blockElemId = 0;
-			ghostedit.imgElemId = 0;
-			ghostedit.sourceelem.style.display = 'block';
-			if(ghostedit.options.resetcallback) ghostedit.options.resetcallback();
-		}
-	};
-})(window);
-(function(window, undefined) {
-	
-	var _inout = {};
-	
-	_inout.init = function () {
-		// Set initial variables
-		_inout.reset();
-		
-		// Add listener to check whether the selection has changed since the last undo save
-		ghostedit.event.addListener("selection:change", function () {ghostedit.history.selectionchanged = true});
-		
-		// Export undo and redo function to the api
-		ghostedit.api.importHTML = function (source) { return _inout.importHTML(source); }
-		ghostedit.api.exportHTML = function () { return _inout.exportHTML(); }
-	};
-	
-	_inout.reset = function () {
-		_inout.importhandlers = [];
-	};
-	
-	_inout.importHTML = function (sourcenode) {
-		var tagname, handler, domtree, editdiv;
-		if (!sourcenode || sourcenode.childNodes.length < 1) return false;
-		
-		/*tagname = sourcenode.tagName.toLowerCase();
-		if (handler = _inout.importhandlers[tagname]) {
-			result = ghostedit.plugins[handler].inout.importHTML(insertedelem, elem)
-			if (result) insertedelem = result;
-		}*/
-		
-		// Call container import, and set resulting domnode's contenteditable to true
-		editdiv = ghostedit.plugins.container.inout.importHTML(sourcenode);
-		editdiv.className = "ghostedit_editdiv";
-		editdiv.setAttribute("data-ghostedit-isrootnode", "true");
-		editdiv.contentEditable = 'true';
-		
-		// Trigger 'import:after' event
-		ghostedit.event.trigger("import:after", {"editdiv": editdiv});
-		
-		// Return editdiv container
-		return editdiv;
-	};
-	
-	_inout.exportHTML = function () {
-		var editwrap = ghostedit.editdiv;
-		var i = 0,elem,finalCode,params,handleResult,paracount,snippet, finalexport;
-		
-		ghostedit.event.trigger("export:before");
-		
-		//Preparation - contenteditable = false
-		editwrap.contentEditable = false;
-		
-		finalexport = ghostedit.plugins.container.inout.exportHTML(editwrap, false);
-		
-		//Tidy up - contenteditable = true
-		editwrap.contentEditable = true;
-		
-		ghostedit.event.trigger("export:after");
-		
-		return finalexport; //{snippet: snippet, full: finalCode};
-	};
-
-	_inout.openPreview = function () {
-		window.open(ghostedit.options.previewurl);
-	};
-	
-	_inout.registerimporthandler = function (importhandler/*, elements that can be handled*/) {
-		var i, j, args, tag, list;
-		if (typeof importhandler !== "function") return false;
-		if (arguments.length < 2) return false;
-		args = Array.prototype.slice.call(arguments);
-		args.shift();
-		
-		// Loop through arguments
-		for (i = 0; i < args.length; i++) {
-			tag = args[i];
-			
-			_inout.importhandlers[tag] = importhandler;
-		}
-	};
-	
-	window.ghostedit.inout = _inout;
-})(window);
-(function (window, undefined) {
-
-	var _plugins = {};
-	
-	_plugins.register = function(name, object) {
-		if (ghostedit.plugins[name]) return false;
-		
-		ghostedit.plugins[name] = object;
-		
-		return true;
-	},
-	
-	_plugins.enable = function (name) {
-		if (!ghostedit.plugins[name]) return false;
-		if (ghostedit.enabledplugins[name]) _plugins.disable(name);
-		
-		var plugin = ghostedit.plugins[name];
-		if (typeof(plugin.enable) === "function") {
-			plugin.enable();
-		}
-		ghostedit.enabledplugins[name] = true;
-	},
-	
-	_plugins.disable = function (name) {
-		if (!ghostedit.enabledplugins[name] || !ghostedit.plugins[name]) return false;
-		
-		var plugin = ghostedit.plugins[name];
-		if (typeof(plugin.disable) === "function") {
-			plugin.disable();
-		}
-		ghostedit.enabledplugins[name] = false;
-	}
-	
-	window.ghostedit.api.plugin = _plugins;
-})(window);
-
-(function(window, undefined) {
-		
-		var _selection = {
-			savedRange: null,
-			nodepath: [],
-			saved: {type: "none", data: null},
-			archived: {type: "none", data: null}
-		}
-		
-		_selection.save = function (updateui) {
-			var sel;
-			if (updateui !== false) updateui = true;
-			sel = lasso().setToSelection();
-			
-			if (!_selection.isInEditdiv(sel.getStartNode())) {
-				_selection.saved.type = "none";
-				return false;
-			}
-			else {
-				//Save current selection to range
-				_selection.saved.type = "textblock";
-				_selection.saved.data = sel;//.bookmarkify(ghostedit.editdiv);
-				
-				// Save to legacy variable
-				_selection.savedRange = _selection.saved.data;
-				
-				ghostedit.event.trigger("selection:change");
-				
-				_selection.updatePathInfo();
-				if (updateui) ghostedit.event.trigger("ui:update");
-				return true;
-			}
-		};
-		
-		_selection.restore = function (type, data, mustbevalid) {
-			if (!type || typeof type !== "string") type = _selection.saved.type;
-			if (!data) data = _selection.saved.data;
-			
-			// if type is none, but cant be, get archived selection
-			if (type === "none" && mustbevalid) {
-				type = _selection.archived.type;
-				data = _selection.archived.data;
-			} 
-			
-			// If type is none, clear selection
-			if (type === "none") {
-				_selection.clear();
-				return true;
-			}
-			
-			// Else, call restore function from appropriate plugin
-			if (ghostedit.plugins[type] && ghostedit.plugins[type].selection.restore) {
-				if (ghostedit.plugins[type].selection.restore(data)) {
-					return true;
-				}
-				else {
-					_selection.clear();
-					return false;
-				}
-			}
-		};
-		
-		_selection.restoreValid = function (type, data) {
-			return _selection.restore(type, data, true);
-		};
-		
-		_selection.deleteContents = function (collapse) {
-			if (collapse !== "collapsetostart" && collapse !== "collapsetoend") collapse = false;
-			var handler, handled, ghostblock;
-			
-			ghostblock = _selection.getContainingGhostBlock();
-			
-			while (true) {
-				handler = ghostblock.getAttribute("data-ghostedit-handler");
-				handled = ghostedit.plugins[handler].selection.deleteContents(ghostblock, collapse);
-				if (handled === true) break;
-				
-				ghostblock = ghostedit.dom.getParentGhostBlock(ghostblock);
-				if (!ghostblock) break;
-			}
-						
-			switch (collapse) {
-				case "collapsetostart":
-					lasso().setToSelection().collapseToStart().select();
-				break;
-				case "collapsetoend":
-					lasso().setToSelection().collapseToEnd().select();
-				break;
-			}
-			
-			_selection.save();
-		};
-		
-		_selection.isSameAs = function (sel) {
-			if (!sel || !sel.type) return false;
-			
-			if (sel.type !== _selection.saved.type) return false
-			
-			if (sel.type === "none") return true;
-			// Else, call compare function from appropriate plugin
-			if (ghostedit.plugins[sel.type] && ghostedit.plugins[sel.type].selection.compare) {
-				return ghostedit.plugins[sel.type].selection.compare (sel.data, _selection.saved.data)
-			}
-			return false;
-		};
-		
-		_selection.clear = function () {
-			lasso().clearSelection();
-			_selection.saved = {"type": "none", "data": null}
-		};
-		
-		_selection.isInEditdiv = function (elem) {
-			var elem, i;
-			if (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-				while (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-					if (elem == null) return false;
-					elem = elem.parentNode;
-					if (elem == null) return false;
-				}
-			}
-			return true;
-		};
-		
-		_selection.updatePathInfo = function (elem) {
-			var bold = false, italic = false, underline = false, aelem = false, i, formatboxes;
-			
-			
-			if (!elem) elem = _selection.savedRange.getParentNode();
-			
-			// If nodepath is same as before, don't bother calculating it again
-			// below code DOES NOT equal above statement. (dom node can have moved)
-			//if (elem === _selection.nodepath[0]) return true;
-			
-			_selection.nodepath = [];
-			
-			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-isrootnode") != "true") {
-					
-					if (elem == null) return null;
-					
-					if (elem.nodeType == 1)	_selection.nodepath.push(elem);
-					
-					elem = elem.parentNode;
-					
-					if (elem == null) return false;
-				}
-			}
-			
-			// Make sure rootnode/editdiv is also included in path
-			if (elem && elem.getAttribute("data-ghostedit-isrootnode") == "true") {
-					_selection.nodepath.push(elem);
-			}
-		};
-		
-		_selection.getContainingGhostBlock = function () {			
-			var node = _selection.savedRange.getParentNode()
-			if (!node) return false;
-
-			while (!ghostedit.dom.isGhostBlock(node)) {
-				node = node.parentNode;
-				if (node == null) return false;
-			}
-			
-			return node;
-		};
-		
-		window.ghostedit.selection = _selection;
-})(window);
-(function (window, undefined) {
-	
-	var _textblock = {};
+	var _textblock = {},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit,
+	console = window.console || {};
+	console.log = console.log || function () {};
 	
 	_textblock.enable = function () {
 				
@@ -2171,111 +2490,39 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		ghostedit.inout.registerimporthandler (_textblock.inout.importHTML, "#textnode", "b", "strong", "i", "em", "u", "strike", "span");
 		
 		// Bookmarkify (serialize) the selection, and save the bookmark to the lasso object
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
-				ghostedit.selection.saved.data.bookmarkify(ghostedit.editdiv);
+				ghostedit.selection.saved.data.bookmarkify(ghostedit.el.rootnode);
 			}
 		});
 		
 		// Clone range object after undo save to avoid accidentally modifying the saved range objects
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
-				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone()
-			}
-		});
-		
-		ghostedit.event.addListener ("selection:change", function () {
-			var node;
-			for(i = 0; i < ghostedit.selection.nodepath.length; i++) {
-				node = ghostedit.selection.nodepath[i];
-				if(_textblock.isTextBlock(node)) {
-					ghostedit.event.trigger("ui:newcontext", {context: "textblock"});
-				}
+				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone();
 			}
 		});
 		
 		ghostedit.api.insert = ghostedit.api.insert || {};
-		ghostedit.api.insert.character = function (character) {return _textblock.insert.character(character); }
-		ghostedit.api.insert.br = function () {return _textblock.insert.br; }
+		ghostedit.api.insert.character = function (character) { return _textblock.insert.character(character); };
+		ghostedit.api.insert.br = function () {return _textblock.insert.br; };
 		
 		return true;
-	}
-	
-	_textblock.ghostevent = function (eventtype, target, sourcedirection, params) {
-		var docall = false, blocktype, eventhandled = false;
-		switch (eventtype) {
-			case "delete":
-				return _textblock.event.textdelete (target, sourcedirection, params);
-			break;	
-			case "keydown":
-				switch (params.keycode) {
-					case 8: // backspace
-						return _textblock.event.backspace(target, params.event);
-					break;
-					case 46: //delete
-						return _textblock.event.deletekey (target, params.event);
-					break;
-				}
-			break;
-			case "keypress":
-				switch (params.keycode) {
-					case 13: // enter
-						return _textblock.event.enterkey (target, params.event);
-					break;
-				}
-			break;
-		}
 	};
 		
 	_textblock.event = {
-		textdelete: function (target, sourcedirection, params){
-			var parent, handler;
-			switch (sourcedirection) {
-				case "ahead":
-					ghostedit.history.saveUndoState();
-					if (!_textblock.isEmpty(target)) {
-						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
-						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
-							target.innerHTML += params.merge.sourcecontent;
-						}
-						_textblock.mozBrs.tidy(target);
-						params.merge.callback();
-						//params.sourceblock.parentNode.removeChild(params.sourceblock);
-						lasso().selectNode("ghostedit_selection_marker").select()//.deleteContents();
-						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
-						ghostedit.selection.save();
-					}
-					else {
-						parent = ghostedit.dom.getParentGhostBlock(target);
-						handler = parent.getAttribute("data-ghostedit-handler");
-						//alert(target.id);
-						ghostedit.plugins[handler].dom.removechild(parent, target);
-					}
-					ghostedit.history.saveUndoState(true);
-					return true;
-				break;
-				case "behind":
-					var block = ghostedit.selection.getContainingGhostBlock();
-					var params =  {
-						"merge": {
-							"contenttype": "inlinehtml",
-							"sourcecontent": target.innerHTML,
-							"callback": ghostedit.util.preparefunction(function (node) {
-										var parent = node.parentNode;
-										var handler = parent.getAttribute("data-ghostedit-handler");
-										ghostedit.plugins[handler].dom.removechild(parent, node)
-									}, false, target)
-						}
-					}
-					ghostedit.event.sendBackwards("delete", target, params);
-					//----------------------------------
-					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
-					
-					//ghostedit.event.cancelKeypress = true;
-					//return ghostedit.util.cancelEvent ( e );
-					return true;
-				break;
+		keydown: function (target, keycode, event) {
+			switch (keycode) {
+				case 8: // backspace
+					return _textblock.event.backspace(target, event);
+				case 46: //delete
+					return _textblock.event.deletekey (target, event);
 			}
+		},
+		
+		keypress: function (target, keycode, event) {
+			// Enter key
+			if (keycode === 13) return _textblock.event.enterkey (target, event);
 		},
 		
 		backspace: function (block, e) {
@@ -2295,7 +2542,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 							var handler = parent.getAttribute("data-ghostedit-handler");
 							ghostedit.plugins[handler].dom.removechild(parent, node);}, false, block)
 					}
-				}
+				};
 				ghostedit.event.sendBackwards("delete", block, params );
 
 				ghostedit.event.cancelKeypress = true;
@@ -2320,22 +2567,71 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		enterkey: function (elem, e) {
-			var result;
 			ghostedit.history.saveUndoState();
 			
 			if (e.shiftKey) {
-				_textblock.format.insert.br();
+				_textblock.insert.br();
 				_textblock.mozBrs.tidy (elem);
 			}
 			else {
 				_textblock.split(elem);
 			}
-			ghostedit.history.saveUndoState(true);
+			ghostedit.history.saveUndoState();
 			
 			ghostedit.util.cancelEvent ( e );
 			return true;
 		}
-	}
+	};
+	
+	_textblock.dom = {
+		deleteevent: function (target, sourcedirection, params){
+			var parent, handler, block;
+			switch (sourcedirection) {
+				case "ahead":
+					ghostedit.history.saveUndoState();
+					if (!_textblock.isEmpty(target)) {
+						target.innerHTML += "<span id='ghostedit_selection_marker'>&#x200b;</span>";
+						if (params.merge && params.merge.sourcecontent && (params.merge.contenttype === "inlinehtml" || params.merge.contenttype === "text")) {
+							target.innerHTML += params.merge.sourcecontent;
+						}
+						_textblock.mozBrs.tidy(target);
+						params.merge.callback();
+						//params.sourceblock.parentNode.removeChild(params.sourceblock);
+						lasso().selectNode("ghostedit_selection_marker").select();//.deleteContents();
+						document.getElementById("ghostedit_selection_marker").parentNode.removeChild(document.getElementById("ghostedit_selection_marker"));
+						ghostedit.selection.save();
+					}
+					else {
+						parent = ghostedit.dom.getParentGhostBlock(target);
+						handler = parent.getAttribute("data-ghostedit-handler");
+						//alert(target.id);
+						ghostedit.plugins[handler].dom.removechild(parent, target);
+					}
+					ghostedit.history.saveUndoState();
+					return true;
+				case "behind":
+					block = ghostedit.selection.getContainingGhostBlock();
+					params =  {
+						"merge": {
+							"contenttype": "inlinehtml",
+							"sourcecontent": target.innerHTML,
+							"callback": ghostedit.util.preparefunction(function (node) {
+										var parent = node.parentNode,
+										handler = parent.getAttribute("data-ghostedit-handler");
+										ghostedit.plugins[handler].dom.removechild(parent, node);
+									}, false, target)
+						}
+					};
+					ghostedit.event.sendBackwards("delete", target, params);
+					//----------------------------------
+					//_textblock.remove(_textblock.selection.getStartTextBlockNode());
+					
+					//ghostedit.event.cancelKeypress = true;
+					//return ghostedit.util.cancelEvent ( e );
+					return true;
+			}
+		}
+	};
 	
 	_textblock.selection = {
 		compare: function (r1, r2) {
@@ -2345,7 +2641,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		restore: function (savedrange) {
 			if (!savedrange || !savedrange.unbookmarkify) return false;
-			savedrange.unbookmarkify(ghostedit.editdiv);
+			savedrange.unbookmarkify(ghostedit.el.rootnode);
 			savedrange.select();
 			return true;
 		},
@@ -2377,10 +2673,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		getTextBlockNode: function (elem) {
-			if (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-elemtype") != "textblock") {
-				while (elem.nodeType != 1 || elem.getAttribute("data-ghostedit-elemtype") != "textblock") {
+			if (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-elemtype") !== "textblock") {
+				while (elem.nodeType !== 1 || elem.getAttribute("data-ghostedit-elemtype") !== "textblock") {
 					elem = elem.parentNode;
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 			}
 			return elem;
@@ -2397,11 +2693,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		//Assumes selection saved manually
 		isAtStartOftextblock: function () {
-			var caretIsAtStart = false, tempnode, range, selrange, savedRange, i, isequal, prevchar, startpoint;
-			var textblocknode, wholenode;
+			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode;
 			
 			if(document.createRange) {
-				if(ghostedit.selection.savedRange.isCollapsed() && ghostedit.selection.savedRange.getNative().startOffset == 0) {
+				range = ghostedit.selection.savedRange;
+				if(range.isCollapsed() && range.getNative().startOffset === 0) {
 					caretIsAtStart = true;
 					tempnode = ghostedit.selection.savedRange.getStartNode();
 				}
@@ -2412,18 +2708,17 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				while (tempnode.nodeType !== 1 || tempnode.getAttribute("data-ghostedit-elemtype") !== "textblock") {
 					if (tempnode !== tempnode.parentNode.childNodes[0]) {
 						isequal = false;
-						//alert(tempnode.parentNode.childNodes[0].nodeType);
-						//alert(tempnode.parentNode.childNodes[0].length);
-						if((tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0)
-								|| (tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
+						if((tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0) ||
+								(tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
 							//Deals with empty text nodes at start of textblock elem
 							for(i = 1; i < tempnode.parentNode.childNodes.length; i += 1) {
-								if (tempnode == tempnode.parentNode.childNodes[i]) {
+								firstnode = tempnode.parentNode.childNodes[0];
+								if (tempnode === tempnode.parentNode.childNodes[i]) {
 									isequal = true;
 									break;
 								}
-								else if(!(tempnode.parentNode.childNodes[0].nodeType === 3 && tempnode.parentNode.childNodes[0].length === 0)
-								&& !(tempnode.parentNode.childNodes[0].nodeType === 1 && tempnode.parentNode.childNodes[0].className === "moz_dirty")) {
+								else if(!(firstnode.nodeType === 3 && firstnode.length === 0) &&
+									!(firstnode.nodeType === 1 && firstnode.className === "moz_dirty")) {
 									break;
 								}
 							}
@@ -2461,8 +2756,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		//Assumes selection saved manually
 		isAtEndOftextblock: function () {
-			/* Check if caret is at very start of textblock elem */
-			var caretIsAtEnd = false, tempnode, selrange, range, savedRange, i, isequal, prevchar, rangefrag, elemfrag, textblocknode, prevchar, savedrange, endpoint, wholenode;
+			var caretIsAtEnd = false, selrange, range, rangefrag, elemfrag, textblocknode, endpoint;
 			
 			if (!ghostedit.selection.savedRange.isCollapsed()) return false;
 			
@@ -2472,7 +2766,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				rangefrag = document.createElement("div");
 				rangefrag.appendChild( ghostedit.selection.savedRange.getNative().cloneContents() );
 				
-				range = ghostedit.selection.savedRange.getNative()
+				range = ghostedit.selection.savedRange.getNative();
 				range.setEnd(textblocknode, textblocknode.childNodes.length);
 				elemfrag = document.createElement("div");
 				rangefrag.appendChild( range.cloneContents() );
@@ -2480,7 +2774,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				_textblock.mozBrs.clear(rangefrag);
 				_textblock.mozBrs.clear(elemfrag);
 				
-				if(rangefrag.innerHTML == elemfrag.innerHTML) {
+				if(rangefrag.innerHTML === elemfrag.innerHTML) {
 					caretIsAtEnd = true;
 				}
 			}
@@ -2512,10 +2806,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				wordstart = _textblock.selection.findwordstart (range.startContainer, range.startOffset);
 				wordend = _textblock.selection.findwordend (range.endContainer, range.endOffset);
 				
-				//If only one end has moved, then it's not from the middle
+				//If only one end has moved (or neither), then it's not from the middle
 				if (onlyfrommiddle) {
-					if (range.startContainer == wordstart.node && range.startOffset == wordstart.offset) return range;
-					if (range.endContainer == wordend.node && range.endOffset == wordend.offset) return range;
+					if (range.startContainer === wordstart.node && range.startOffset === wordstart.offset) return lasso().setFromNative(range);
+					if (range.endContainer === wordend.node && range.endOffset === wordend.offset) return lasso().setFromNative(range);
 				}
 				
 				range.setStart(wordstart.node, wordstart.offset);
@@ -2523,8 +2817,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			}
 			else {
 				range.expand("word");
-				//alert(range.getHTML());
-				if (range.htmlText.split().reverse()[0] == " ") {
+				if (range.htmlText.split().reverse()[0] === " ") {
 					range.moveEnd("character", -1);
 				}
 			}
@@ -2532,11 +2825,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		findwordstart: function (node, offset) {
-			var r, range, leftnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
+			var leftnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
 			
 			if (!node || !node.nodeType) return false;
 			
-			//Handle text node
+			// Handle text node
 			if (node.nodeType === 3) {
 				leftnodecontent = node.nodeValue.substring(0, offset);
 				stroffset = leftnodecontent.search(wordendregex);
@@ -2549,22 +2842,22 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					return { node: node, offset: totalstroffset };
 				}
 			}
-			//Handle Element
+			
+			// Handle Element
 			else if (node.nodeType === 1) {
 				if (offset > 0) {
 					return _textblock.selection.findwordstart(node.childNodes[offset - 1], node.childNodes[offset - 1].length);
 				}
 			}
 			
-			//If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.nodeType === 1 && node.getAttribute("data-ghostedit-elemtype") == "textblock"){
-				return {
-					node: node,
-					offset: offset
-				}
+			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
+			if (_textblock.isTextBlock(node)){
+				return {"node": node, "offset": offset};
 			}
-			//If node is a NOT ghostedit_textblock: check previous node
-			if (prevnode = node.previousSibling) {
+			
+			// If node is a NOT ghostedit_textblock: check previous node
+			prevnode = node.previousSibling;
+			if (prevnode) {
 				if (prevnode.nodeType === 3) {
 					return _textblock.selection.findwordstart(prevnode, prevnode.nodeValue.length);
 				}
@@ -2572,7 +2865,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					return _textblock.selection.findwordstart(prevnode, prevnode.childNodes.length);
 				}
 			}
-			//If node is a NOT ghostedit_textblock and no previousSibling: move up tree
+			// If node is a NOT ghostedit_textblock and no previousSibling: move up tree
 			else {
 				return _textblock.selection.findwordstart(node.parentNode, ghostedit.dom.getNodeOffset(node));
 			}
@@ -2581,12 +2874,12 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		findwordend: function (node, offset) {
-			//alert(node + offset + " : " + node.childNodes.length);
-			var r, range, rightnodecontent, stroffset, totalstroffset, prevnode, wordendregex = /\s|[\!\?\.\,\:\;\"]/;
+			var rightnodecontent, stroffset, totalstroffset, nextnode,
+			wordendregex = /\s|[\!\?\.\,\:\;\"]/;
 			
 			if (!node || !node.nodeType) return false;
 			
-			//Handle text node
+			// Handle text node
 			if (node.nodeType === 3) {
 				rightnodecontent = node.nodeValue.substring(offset);
 				stroffset = rightnodecontent.search(wordendregex);
@@ -2596,26 +2889,25 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					return { node: node, offset: totalstroffset };
 				}
 			}
-			//Handle Element
+			
+			// Handle Element
 			else if (node.nodeType === 1) {
 				if (offset < node.childNodes.length) {
 					return _textblock.selection.findwordend(node.childNodes[offset], 0);
 				}
 			}
 			
-			
-			//If no wordend match found in current node and node is a ghostedit_textblock: return current position
-			if (node.className && node.getAttribute("data-ghostedit-elemtype") == "textblock"){
-				return {
-					node: node,
-					offset: offset
-				}
+			// If no wordend match found in current node and node is a ghostedit_textblock: return current position
+			if (_textblock.isTextBlock(node)){
+				return {"node": node, "offset": offset};
 			}
-			//If node is a NOT ghostedit_textblock: check next node
-			else if (nextnode = node.nextSibling) {
+			
+			// If node is a NOT ghostedit_textblock: check next node
+			nextnode = node.nextSibling;
+			if (nextnode) {
 				return _textblock.selection.findwordend(nextnode, 0);
 			}
-			//If node is a NOT ghostedit_textblock and no nextSibling: move up tree
+			// If node is a NOT ghostedit_textblock and no nextSibling: move up tree
 			else {
 				return _textblock.selection.findwordend(node.parentNode, ghostedit.dom.getNodeOffset(node) + 1);
 			}
@@ -2648,12 +2940,9 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		importHTML: function (source) {
-			var newTextBlock, tagname, node, childcount, prevnode, sourcecontent;
+			var newTextBlock, tagname, node, childcount, prevnode, nodetype, parsednode;
 			
 			nodetype = _textblock.inout.isHandleableNode(source);
-			//console.log("textblock import:");
-			//console.log(nodetype);
-			//console.log(source.outerHTML);
 			switch (nodetype) {
 				case "block":
 					// Create TextBlock
@@ -2673,6 +2962,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					newTextBlock.ondragleave = function(){return false;};
 					newTextBlock.ondragover = function(){return false;};
 					newTextBlock.ondrop = function(e){
+						var elem, elemid;
 						// This function does basic image paragraph changing dnd
 						elemid = e.dataTransfer.getData("Text") || e.srcElement.id;
 						//alert(elemid); TODO drag drop
@@ -2684,7 +2974,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 								
 					_textblock.mozBrs.tidy (newTextBlock);
 					return newTextBlock;
-				break;
 				case "child":
 				case "contents":
 				case "text":
@@ -2706,7 +2995,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					
 					_textblock.mozBrs.tidy (newTextBlock);
 					return (childcount > 0) ? newTextBlock : false;
-				break;
 			}
 			return false;
 		},
@@ -2724,8 +3012,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			finalCode += "<" + elem.tagName.toLowerCase();
 			
 			// Extract styles
-			if (elem.style.textAlign != "") { stylecode += "text-align:" + elem.style.textAlign + ";"; }
-			if (elem.style.clear != "") stylecode += "clear:" + elem.style.clear + ";";
+			if (elem.style.textAlign !== "") { stylecode += "text-align:" + elem.style.textAlign + ";"; }
+			if (elem.style.clear !== "") stylecode += "clear:" + elem.style.clear + ";";
 			
 			if (stylecode.length > 0) finalCode += " style='" + stylecode + "'";
 			
@@ -2744,7 +3032,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		isHandleableNode: function (node) {
-			var blocktags, childtags, nodetag, i;
+			var nodetag;
 			if (!node || !node.nodeType) return false;
 			
 			// Handle textnode case
@@ -2780,38 +3068,27 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					text = node.nodeValue.replace(/[\n\r\t]/g,"");
 					// Return node, or false if node is empty
 					return (text.length > 0) ? document.createTextNode(text) : false;
-				break;
 				case "block":
 				case "child":
 					cleannode = document.createElement(node.tagName.toLowerCase());
-				case "contents":
-				default:
-					// If allowed childnode, or contentsnode recurse on children, and append
-					cleannode = cleannode || document.createDocumentFragment();
-					nodes = node.childNodes;
-					for (i = 0; i < nodes.length; i++) {
-						if (cleanchild = _textblock.inout.parse(nodes[i])) {
-							cleannode.appendChild(cleanchild);
-						}
-					}
-					return cleannode;
-				break;
-				/*default:
-					if (typeof nodetype === "function") {
-						cleannode = nodetype(node);
-						return cleannode || false;
-					}
-				break;*/
+				/*case "contents":
+					Do nothing*/
 			}
-			
-			// Else return false
-			return false;
+
+			// For 'block', 'child' and 'contents' nodes: recurse on children and append
+			cleannode = cleannode || document.createDocumentFragment();
+			nodes = node.childNodes;
+			for (i = 0; i < nodes.length; i++) {
+				cleanchild = _textblock.inout.parse(nodes[i]);
+				if (cleanchild) cleannode.appendChild(cleanchild);
+			}
+			return cleannode;
 		}
 	};
 	
 	_textblock.paste = {			
 		handle: function (target, source, position) {
-			var node, nodetype, i, pastednodes, cleannode, html, newnode, text, selnode, blocks, parent, handler, marker;
+			var blocks;
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
 			
 			console.log(position);
@@ -2867,7 +3144,6 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			// If not first element, then split and tidy
 			_textblock.mozBrs.clear(source);
-			console.log("HEYHEYHEY");
 			ghostedit.selection.saved.data.collapseToStart().select();
 			lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
 			blocks = _textblock.split(target);
@@ -2911,7 +3187,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		clean: function (target) {
-			var cleannode, nodes, content, cleanchild;
+			var content, cleanchild, i;
 			if (!target || !target.nodeType) return false;
 			
 			// If target is empty, return target
@@ -2920,9 +3196,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			// Else loop through content, getting clean versions of each child node recursively
 			content = document.createDocumentFragment();
 			for (i = 0; i < target.childNodes.length; i++) {
-				if (cleanchild = _textblock.paste.cleanChild(target.childNodes[i])) {
-					content.appendChild(cleanchild);
-				}
+				cleanchild = _textblock.paste.cleanChild(target.childNodes[i]);
+				if (cleanchild)	content.appendChild(cleanchild);
 			}
 			
 			// Replace target content with new content
@@ -2933,7 +3208,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		cleanNode: function (node) {
-			var cleannode, nodes, cleanchild, nodetype;
+			var cleannode, nodes, cleanchild, nodetype, i;
 			if (!node || !node.nodeType) return false;
 			
 			nodetype = _textblock.paste.isHandleableNode(node);
@@ -2942,19 +3217,16 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					// Strip whitespace and tab characters from textnodes
 					node.nodeValue = node.nodeValue.replace(/[\n\r\t]/g,"");
 					return node;
-				break;
 				case "child":
 				case "contents":
 					// If allowed childnode, or contentsnode recurse on children, and append
 					cleannode = (nodetype === "child") ? node.cloneNode(false) : document.createDocumentFragment();
 					nodes = node.childNodes;
 					for (i = 0; i < nodes.length; i++) {
-						if (cleanchild = _textblock.paste.cleanNode(nodes[i])) {
-							cleannode.appendChild(cleanchild);
-						}
+						cleanchild = _textblock.paste.cleanNode(nodes[i]);
+						if (cleanchild)	cleannode.appendChild(cleanchild);
 					}
 					return cleannode;
-				break;
 			}
 			
 			// Else return false
@@ -2992,11 +3264,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.isFirst = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -3007,11 +3279,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.isLast = function (textblockelem) {
-		var editdiv, i;
-		editdiv = ghostedit.editdiv;
-		for(i = editdiv.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
-				if(editdiv.getElementsByTagName("*")[i] === textblockelem) {
+		var rootnode, i;
+		rootnode = ghostedit.el.rootnode;
+		for(i = rootnode.getElementsByTagName("*").length - 1; i > 0; i -= 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
+				if(rootnode.getElementsByTagName("*")[i] === textblockelem) {
 					return true;
 				}
 				else {
@@ -3022,11 +3294,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.count = function () {
-		var editdiv, childCount, i;
-		editdiv = ghostedit.editdiv;
+		var rootnode, childCount, i;
+		rootnode = ghostedit.el.rootnode;
 		childCount = 0;
-		for(i = 0; i < editdiv.getElementsByTagName("*").length; i += 1) {
-			if(editdiv.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") == "textblock") {
+		for(i = 0; i < rootnode.getElementsByTagName("*").length; i += 1) {
+			if(rootnode.getElementsByTagName("*")[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
 				childCount += 1;
 			}
 		}
@@ -3066,6 +3338,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		newElem.ondragleave = function(){return false;};
 		newElem.ondragover = function(){return false;};
 		newElem.ondrop = function(e){
+			var elem, elemid;
 			// This function does basic image paragraph changing dnd
 			elemid = e.dataTransfer.getData("Text") || e.srcElement.id;
 			//alert(elemid); TODO drag drop
@@ -3082,7 +3355,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	};
 	
 	_textblock.remove = function (textblockelem) {
-		var savedElemContent, editdiv, focuselem, i, thisone, s, range, offsetLeft, offsetTop, brNode;
+		var savedElemContent, rootnode, focuselem, i, thisone, textblockelems;
 
 		ghostedit.selection.save();
 		ghostedit.history.saveUndoState();
@@ -3092,8 +3365,8 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		savedElemContent = textblockelem.innerHTML;
 		
 		// Cycle through textblock elements backwards to select the one before the current one to focus
-		editdiv = ghostedit.editdiv;
-		textblockelems = editdiv.getElementsByTagName("*");
+		rootnode = ghostedit.el.rootnode;
+		textblockelems = rootnode.getElementsByTagName("*");
 		thisone = false;
 		for(i = textblockelems.length - 1; i >= 0; i -= 1) {
 			if (thisone === true && textblockelems[i].getAttribute("data-ghostedit-elemtype") === "textblock") {
@@ -3107,7 +3380,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		// If focuselem is empty, delete it instead (intuitive behaviour)
 		if (_textblock.isEmpty(focuselem)) {
-			editdiv.removeChild(focuselem);
+			rootnode.removeChild(focuselem);
 			
 			lasso().setCaretToStart(textblockelem).select();
 			
@@ -3118,7 +3391,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		
 		// Remove textblock elem
-		editdiv.removeChild(textblockelem);
+		rootnode.removeChild(textblockelem);
 		
 		// Set caret to end of focuselem
 		lasso().setCaretToEnd(focuselem).select();
@@ -3166,14 +3439,11 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		// Otherwise, append block2content to block1 and delete block2
 		block1.innerHTML += "<span id='ghostedit_marker'>&#x200b;</span>" + block2.innerHTML;
-		//DEV console.log(block1.parentNode.cloneNode(true));
 		parent = block2.parentNode;
 		handler = parent.getAttribute("data-ghostedit-handler");
 		ghostedit.plugins[handler].dom.removechild(parent, block2);
-		//block2.parentNode.removeChild(block2);
 		_textblock.mozBrs.tidy(block1);
-		//DEV console.log(block1.parentNode.cloneNode(true));
-		lasso().selectNode("ghostedit_marker").select()//.deleteContents();
+		lasso().selectNode("ghostedit_marker").select();//.deleteContents();
 		document.getElementById("ghostedit_marker").parentNode.removeChild(document.getElementById("ghostedit_marker"));
 		return block1;
 	};
@@ -3185,7 +3455,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		atstart = (_textblock.selection.isAtStartOftextblock() === true) ? true : false;
 		atend = (_textblock.selection.isAtEndOftextblock() === true) ? true : false;
 		wheretoinsert = (atstart && !atend) ? "before" : "after";
-		elemtype = (wheretoinsert == "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
+		elemtype = (wheretoinsert === "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
 		
 		//console.log("atstart - " + atstart+ "\natend - " + atend + "\nwhere - " + wheretoinsert);
 		
@@ -3339,29 +3609,28 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			
 			ghostedit.api.format.alignText = function (alignDirection) {
 				if (!/left|right|center|justify/.test(alignDirection)) return false;
-				document.getElementById("align" + alignDirection + "Button").className = "current";
 				_textblock.format.formatSelected(_textblock.format.alignText, {"alignDirection": alignDirection});
 			};
 			
 			ghostedit.api.format.bold = function () {
 				_textblock.format.formatSelected(_textblock.format.bold);
-			},
+			};
 			
 			ghostedit.api.format.italic = function () {
 				_textblock.format.formatSelected(_textblock.format.italic);
-			},
+			};
 			
 			ghostedit.api.format.underline = function () {
 				_textblock.format.formatSelected(_textblock.format.underline);
-			},
+			};
 			
 			ghostedit.api.format.strikethrough = function () {
 				_textblock.format.formatSelected(_textblock.format.strikethrough);
-			},
+			};
 			
 			ghostedit.api.format.textColor = function (color) {
 				_textblock.format.formatSelected(_textblock.format.textColor, {"color": color});
-			}
+			};
 		},
 		
 		useCommand: function (commandType, param) {
@@ -3375,38 +3644,34 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		getNextNode: function (node) {
-		    if (node.firstChild)
-		        return node.firstChild;
-		    while (node) {
-		        if (node.nextSibling)
-		            return node.nextSibling;
-		        node = node.parentNode;
-		    }
+			if (node.firstChild) return node.firstChild;
+			while (node) {
+				if (node.nextSibling) return node.nextSibling;
+				node = node.parentNode;
+			}
 		},
 		
 		getNodesInRange: function (range) {
-		    var start = range.getStartNode();
-		    var end = range.getEndNode();
-		    var commonAncestor = range.getParentNode();
-		    var nodes = [];
-		    var node;
-		
-		    // walk parent nodes from start to common ancestor
-		    for (node = start.parentNode; node; node = node.parentNode) {
-		        nodes.push(node);
-		        if (node == commonAncestor)
-		            break;
-		    }
-		    nodes.reverse();
-		
-		    // walk children and siblings from start until end is found
-		    for (node = start; node; node = _textblock.format.getNextNode(node)) {
-		        nodes.push(node);
-		        if (node == end)
-		            break;
-		    }
-		
-		    return nodes;
+			var start = range.getStartNode(),
+			end = range.getEndNode(),
+			commonAncestor = range.getParentNode(),
+			nodes = [],
+			node;
+			
+			// walk parent nodes from start to common ancestor
+			for (node = start.parentNode; node; node = node.parentNode) {
+				nodes.push(node);
+				if (node === commonAncestor) break;
+			}
+			nodes.reverse();
+			
+			// walk children and siblings from start until end is found
+			for (node = start; node; node = _textblock.format.getNextNode(node)) {
+				nodes.push(node);
+				if (node === end) break;
+			}
+			
+			return nodes;
 		},
 		
 		useCommandOnWord: function (command) {
@@ -3419,7 +3684,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 					range.getNative().insertNode(marker);
 				}
 				if (!document.createRange && document.selection) {
-					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>")
+					range.getNative().pasteHTML("<span id='ghostedit_marker'>z</span>");
 				}
 				range.selectNode("ghostedit_marker");
 				range = _textblock.selection.extendtoword(range, true);
@@ -3444,7 +3709,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 			ghostedit.selection.save();
 		},
 		
-		bold: function (params) {
+		bold: function () {
 			_textblock.format.useCommand("bold");
 		},
 		
@@ -3466,10 +3731,10 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		
 		
 		formatSelected: function (formatFunc, params) {
+			var elem, startpara, endpara, oldelem, doend, i, descendantblocks;
 			ghostedit.selection.save();
 			ghostedit.history.saveUndoState();
 			
-			var elem, startpara, endpara, selrange, oldelem, doend, i, j;
 			startpara = _textblock.selection.getStartTextBlockNode();
 			endpara = _textblock.selection.getEndTextBlockNode();
 		
@@ -3477,7 +3742,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				elem = startpara;
 				doend = false;
 				do {
-					if (elem === ghostedit.editdiv || elem === null) break;
+					if (elem === ghostedit.el.rootnode || elem === null) break;
 					
 					
 					
@@ -3517,7 +3782,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 		},
 		
 		formatTextBlock: function (textblock, range, formatFunc, params) {
-			var startofblock, endofblock, selrange, newelem;
+			var startofblock, endofblock, newelem;
 			
 			if (!params) params = {};
 			params.textblock = textblock;
@@ -3555,7 +3820,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 				var elem = lasso().setToSelection().getParentElement();
 				while (!ghostedit.dom.isGhostBlock(elem)) {
 					elem = elem.parentNode;
-					if (elem == null) return false;
+					if (elem === null) return false;
 				}
 				if (!_textblock.isTextBlock(elem)) return false;
 				elem.style.textAlign = params.alignDirection;
@@ -3564,7 +3829,7 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 
 		// .tagName is readonly -> need to remove element and add new one
 		setTagType: function (params) {
-			var target, tagtype, newclass, parent, handler, targetid, newTextBlock;
+			var target, tagtype, newclass, parent, targetid, newTextBlock;
 			
 			target = params.textblock;
 			tagtype = params.tagname;
@@ -3601,208 +3866,339 @@ Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Ap
 	ghostedit.api.plugin.register("textblock", _textblock);
 })(window);
 (function (window, undefined) {
+	
+	var _container = {},
+	lasso = window.lasso,
+	ghostedit = window.ghostedit;
+	
+	_container.enable = function () {
+		return true;
+	};
 		
-		var _util = {};
-		
-		_util.trim = function (string) {
-			return string.replace(/^\s+/, "").replace(/\s+$/, "");
-		};
-		
-		// This will call a function using a reference with predefined arguments.
-		//SECOND ARGUMENT = CONTEXT (this) - should usually be false
-		_util.preparefunction = function (func, context /*, 0..n args */) {
-			var args = Array.prototype.slice.call(arguments, 2);
-			return function() {
-				var allArguments = args.concat(Array.prototype.slice.call(arguments));
-				return func.apply(context ? context : this, allArguments);
-			};
-		};
-		
-		_util.isFunction = function (variable) {
-			if (!variable) return false;
-			if (typeof variable !== "function") return false;
+	_container.dom = {
+	
+		addchild: function (target, wheretoinsert, anchorelem, newElem) {
+			
+			if (wheretoinsert === "before") {
+				target.insertBefore(newElem, anchorelem);
+			}
+			else {
+				if (anchorelem.nextSibling !== null) {
+					target.insertBefore(newElem, anchorelem.nextSibling);
+				}
+				else {
+					target.appendChild(newElem);
+				}
+			}
+			
 			return true;
-		};
+		},
 		
-		_util.cloneObject = function (obj) {
-		    // Handle the 3 simple types, and null or undefined
-		    if (null === obj || "object" != typeof obj) return obj;
-		    
-		    // Handle Date
-		    if (obj instanceof Date) {
-		        var copy = new Date();
-		        copy.setTime(obj.getTime());
-		        return copy;
-		    }
+		removechild: function (target, child) {
+			if (!target || !child) return false;
+			
+			target.removeChild(child);
+			
+			return true;
+		}
 		
-		    // Handle Array
-		    if (obj instanceof Array) {
-		        var copy = [], len, i;
-		        for (i = 0, len = obj.length; i < len; ++i) {
-		            copy[i] = _util.cloneObject(obj[i]);
-		        }
-		        return copy;
-		    }
-		
-		    // Handle Object
-		    if (obj instanceof Object) {
-		        var copy = {}, attr;
-		        for (attr in obj) {
-		            if (obj.hasOwnProperty(attr)) copy[attr] = _util.cloneObject(obj[attr]);
-		        }
-		        return copy;
-		    }
-		
-		    //throw new Error("Unable to copy obj! Its type isn't supported.");
-		};
-		
-		_util.addClass = function (elem, c) {
-			elem.className = _util.trim(elem.className) + " " + c;
-		};
-		
-		_util.removeClass = function (elem, c) {
-			var r = new RegExp(c,"g");
-			elem.className = _util.trim(elem.className.replace(r, ""));
-		};
-		
-		_util.cancelEvent = function (e) {
-			if (e && e.preventDefault) {
-				e.stopPropagation(); // DOM style (return false doesn't always work in FF)
-				e.preventDefault();
-			}
-			else if (e) {
-				e.returnValue = false;
-			}
-			return false; // false = IE style
-		};
-		
-		_util.cancelAllEvents = function (e) {
-			if (e && e.preventDefault) {
-				e.stopPropagation(); // DOM style (return false doesn't always work in FF)
-				e.preventDefault();
-			}
-			else if (window.event) {
-				window.event.cancelBubble = true; //IE cancel bubble;
-			}
-			return false; // false = IE style
-		};
-		
-		_util.preventDefault = function (e) {
-			if (e && e.preventDefault) {
-				e.preventDefault();
+		// Not currently needed, but comments left for easier future implementation
+		/*deleteevent: function (target, sourcedirection, params) {
+			switch (sourcedirection) {
+				case "ahead":
+					// Backspace was pressed at the start of the element after the container
+				break;
+				case "behind":
+					// Delete was pressed at the end of the element before the container
+				break;
+				case "top":
+					// Backspace was pressed at the start of the first child GhostBlock of the container
+				break;
+				case "bottom":
+					// Delete was pressed at the end of the last child GhostBlock the container
+				break;
 			}
 			return false;
-		};
+		}*/
+	};
 		
-		_util.preventBubble = function (e) {
-			if (e && e.preventDefault) {
-				e.stopPropagation();
-			}
-			window.event.cancelBubble = true; //IE cancel bubble;
-		};
-		
-		_util.addEvent = function (elem, eventType, handle) {
-			if (elem.addEventListener !== undefined) {
-				elem.addEventListener(eventType, handle, false);
-			}
-			else {
-				elem.attachEvent("on" + eventType, handle);
-			}
-		};
-		
-		_util.removeEvent = function (elem, eventType, handle) {
-			if (elem.removeEventListener !== undefined) {
-				elem.removeEventListener(eventType, handle, false);
-			}
-			else {
-				elem.detachEvent("on" + eventType, handle);
-			}
-		};
-		
-		_util.ajax = function (URL, method, params, sHandle, dataType) {
-			var method, time, connector, responseData, ajaxRequest;
+	_container.selection = {
+		deleteContents: function (container, collapse) {
+			var i, 
+			firstchildblock, lastchildblock, startofblock, endofblock, atverystart = false, atveryend = false,
+			startblock, endblock, cblock, startcblock, endcblock, childblocks, dodelete, selrange, handler;
 			
-			if (!URL || !method) return false;
+			// Temporary selection range to avoid changing actual saved range
+			if(ghostedit.selection.saved.type !== "textblock") return false;
+			selrange = ghostedit.selection.saved.data;
 			
-		   	if(ajaxRequest = getXmlHttpRequestObject()) {
-			    	method = method.toUpperCase();
-					time = +new Date,connector;
-					if(URL.indexOf('?') != -1) {
-					URL.indexOf('?') == URL.length-1 ? connector = "" : connector = "&";
-				}
-				else {
-					connector = "?";
-				}
-				(method === "GET") ? ajaxRequest.open(method, URL+connector+time+"&IsAjaxRequest=true&ajax=true&"+params, true) : ajaxRequest.open(method, URL+connector+time+"&IsAjaxRequest=true&ajax=true", true)
-				ajaxRequest.onreadystatechange = function () {
-					if(ajaxRequest.readyState == 4) {
-						if(ajaxRequest.status == "200") {
-							responseData = dataType == "xml" ? ajaxRequest.responseXML : ajaxRequest.responseText;
-							if(sHandle != null){sHandle(true, responseData);}
-							return true;
-						}
-						else{
-							if(sHandle != null){sHandle(false, responseData);}
-							return false;
-						}
-					}
-				}
-				ajaxRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-				//ajaxRequest.setRequestHeader("Content-length", params.length);
-				//ajaxRequest.setRequestHeader("Connection", "close");
-				(params != null && method === "POST") ? ajaxRequest.send(params) : ajaxRequest.send();
+			// Get first and last child ghostblock
+			childblocks = container.childNodes;
+			firstchildblock = ghostedit.dom.getFirstChildGhostBlock(container);
+			lastchildblock = ghostedit.dom.getLastChildGhostBlock(container);
+			
+			// Ranges representing the start and end of the block
+			startofblock = lasso().setCaretToStart(firstchildblock);
+			endofblock = lasso().setCaretToEnd(lastchildblock);
+			
+			// If selrange starts before or at block, set startblock to the first child ghostblock
+			if (selrange.compareEndPoints("StartToStart", startofblock) !== 1) {
+				atverystart = true;
+				startblock = firstchildblock;
 			}
+			// Otherwise, set child ghostblock containing the start of the selection
 			else {
-				return false;
+				startblock = selrange.getStartNode();
+				if (!ghostedit.dom.isGhostBlock(startblock)) startblock = ghostedit.dom.getParentGhostBlock(startblock);
 			}
 			
-			/* Utility function used by ajax function */
-			function getXmlHttpRequestObject() {
-				if(window.XMLHttpRequest && (window.location.protocol !== "file:" || !window.ActiveXObject)) {
-					return new window.XMLHttpRequest();
-				}
-				else {
-					try {
-						return new window.ActiveXObject("Microsoft.XMLHTTP");
-					}
-					catch(e) {
-						try {
-							return new window.ActiveXObject("MSXML2.XMLHTTP");
-						}
-						catch(e) {return false;}
-					}
-				}
+			// If selrange ends after or at block, set endblock to the last child ghostblock
+			if (selrange.compareEndPoints("EndToEnd", endofblock) !== -1) {
+				atveryend = true;
+				endblock = lastchildblock;
 			}
-		};
-		
-		_util.detectEngines = function() {
+			// Otherwise, set child ghostblock containing the end of the selection
+			else {
+				endblock = selrange.getEndNode();
+				if (!ghostedit.dom.isGhostBlock(endblock)) endblock = ghostedit.dom.getParentGhostBlock(endblock);
+			}
+			
+			startcblock = startblock;
+			while(!ghostedit.dom.isChildGhostBlock(startcblock, container)) startcblock = ghostedit.dom.getParentGhostBlock(startcblock);
+			endcblock = endblock;
+			while(!ghostedit.dom.isChildGhostBlock(endcblock, container)) endcblock = ghostedit.dom.getParentGhostBlock(endcblock);
+			
+			//alert(startblock.id + endblock.id);
+					
+			
+			/*//Handle selectall case
+			if (isatverystart && isatveryend) {
+				dodelete = false;
+				firsttextblocktype = textblockelems[i].tagName.toLowerCase();
+				for(i = 0; i < childblocks.length; i += 1) {
+					if (childblocks[i].getAttribute("data-ghostedit-elemtype") !== undefined && childblocks[i].getAttribute("data-ghostedit-elemtype") !== false) {
+						firstchildblock = childblocks[i];
+						break;
+					}
+				}
+				lasso().setCaretToStart(firstchildblock).select();
+				return true;
+			}*/
+			
+			//ghostedit.textblock.selection.deleteContents(lastchildblock);
+			
+			//alert("start - " + startblock.id + "\nend - " + endblock.id);
+			
+			// Cycle through SELECTED child ghostblocks and call delete method
+			dodelete = false;
+			for(i = 0; i < childblocks.length; i += 1) {
+				
+				cblock = childblocks[i];
+				if ( !ghostedit.dom.isGhostBlock(cblock) ) continue;
+				handler = cblock.getAttribute("data-ghostedit-handler");
+				
+				if (cblock.id === startcblock.id) {
+					ghostedit.plugins[handler].selection.deleteContents( cblock );
+					dodelete = true;
+					continue;
+				}
+				else if (cblock.id === endcblock.id) {
+					ghostedit.plugins[handler].selection.deleteContents( cblock );
+					dodelete = false;
+					break;
+				}
+				
+				if (dodelete) {
+					container.removeChild(childblocks[i]);
+					i--;
+				}
+					
+			}
+			
+			
+			// If the first and last elements in the selection are the same type, then merge
+			if(startcblock.getAttribute("data-ghostedit-elemtype") === endcblock.getAttribute("data-ghostedit-elemtype")) {
+				ghostedit.plugins[startcblock.getAttribute("data-ghostedit-elemtype")].merge(startcblock, endcblock, collapse);
+				if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
+				//^^tests whether endcblock is still in the document, i.e. whether a merge took place
+			}
+			
+			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
+				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
+				dummynode = document.getElementById('ghostedit_dummynode');
+				lasso().selectNodeContents(dummynode).select();*/
+				container.appendChild(ghostedit.textblock.create("p"));
+			}
+			
+			// Place caret where the selection was
+			//lasso().setCaretToStart(endelem).select();
 
-		    //rendering engines
-		    var engine = {ie: 0, gecko: 0, webkit: 0, khtml: 0, opera: 0, ver: null};
+			return true;
+		}
+	};
+	
+	_container.inout = {
+		importHTML: function (sourcenode) {
+			var container, result, i, elemcount, elem, tagname;
+			if (!sourcenode || sourcenode.childNodes.length < 1) return false;
+			
+			container = _container.create();
+			
+			// For each source child node, check if appropriate import handler exists, if so then call it on the node
+			for (i = 0; i < sourcenode.childNodes.length; i += 1) {
+				elem = sourcenode.childNodes[i];
+				if (elem.nodeType !== 1 && elem.nodeType !== 3)  continue;
+				
+				tagname = (elem.nodeType === 3) ? "#textnode" : elem.tagName.toLowerCase();
+				/*if (handler = ghostedit.inout.importhandlers[tagname]) {
+					result = ghostedit.plugins[handler].inout.importHTML(elem)
+					if (result && ghostedit.dom.isGhostBlock(result)) {
+						container.appendChild(result);
+					}
+				}*/
+				if (ghostedit.inout.importhandlers[tagname]) {
+					result = ghostedit.inout.importhandlers[tagname].call(this, elem);
+					if (result && ghostedit.dom.isGhostBlock(result)) {
+						container.appendChild(result);
+					}
+				}
+				else if (elem.childNodes.length > 0) {
+					elemcount = elem.childNodes.length;
+					elem.parentNode.insertBefore(ghostedit.dom.extractContent(elem), elem);
+					elem.parentNode.removeChild(elem);
+					i -= 1;
+				}
+			}
+			
+			// Check any GhostBlock children have been added, else add empty paragraph
+			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
+				container.appendChild(ghostedit.plugins.textblock.create("p"));
+			}
+			
+			return container;
+		},
 		
-		    //detect rendering engines/browsers
-		    var ua = navigator.userAgent;    
-		    if (window.opera){
-		        engine.ver = window.opera.version();
-		        engine.opera = parseFloat(engine.ver);
-		    } else if (/AppleWebKit\/(\S+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.webkit = parseFloat(engine.ver);
-		    } else if (/KHTML\/(\S+)/.test(ua) || /Konqueror\/([^;]+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.khtml = parseFloat(engine.ver);
-		    } else if (/rv:([^\)]+)\) Gecko\/\d{8}/.test(ua)){    
-		        engine.ver = RegExp["$1"];
-		        engine.gecko = parseFloat(engine.ver);
-		    } else if (/MSIE ([^;]+)/.test(ua)){
-		        engine.ver = RegExp["$1"];
-		        engine.ie = parseFloat(engine.ver);
-		    }
+		exportHTML: function (target/*, includeself*/) { // Shouldn't be used without first using export prepare functions
+			if (!target || !ghostedit.dom.isGhostBlock(target) || target.getAttribute("data-ghostedit-elemtype") !== "container") return false;
+			var i = 0, elem, blockreturn, finalCode = "", blockcount = 0, snippet, handler;
+			
+			//if (target.getAttribute("data-ghostedit-isrootnode") === true) isrootnode = true;
+			
+			// Allows for inclusion of enclosing <div> if wanted in future, may also want to retreieve properties
+			//if (includeself === true) finalCode =+ "<div>";
+			
+			for (i = 0; i < target.childNodes.length; i += 1) {
+				elem = ghostedit.dom.isGhostBlock( target.childNodes[i] ) ? target.childNodes[i] : false;
+				if (!elem) continue;
+				
+				handler = elem.getAttribute("data-ghostedit-handler");
+				if (!handler || !ghostedit.plugins[handler]) continue;
+				
+				blockreturn = ghostedit.plugins[handler].inout.exportHTML(elem);
+				
+				if (blockreturn) {
+					finalCode += blockreturn.content;
+					blockcount++;
+				}
+				
+				//Create snippet from first 3 paragraphs
+				if (blockcount <= 3){
+					snippet = finalCode;
+				}
+			}
+			
+			return {content: finalCode, snippet: snippet};
+		}
+	};
+	
+	_container.paste = {
+		handle: function (target, source, position) {
+			var sel, anchor, newnode, dummy;
+			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return true;
+			if(position.isfirst || position.islast) return false;
+			
+			sel = ghostedit.selection.saved.data;
+			anchor = sel.clone().collapseToStart().getParentElement();
+			sel.saveToDOM("ghostedit_paste_start");
+			
+			if (anchor === target) {
+				/* Just use range marker as dummy elem
+				dummy = document.createElement("span");
+				dummy.innerHTML = "&#x200b";
+				dummy.id = "ghostedit_paste_dummy";
+				sel.clone().collapseToStart().insertNode(dummy);*/
+				dummy = document.getElementById("ghostedit_paste_start_range_start");
+				anchor = ghostedit.dom.getPreviousSiblingGhostBlock(dummy) || dummy;
+			}
+			
+			while (anchor.parentNode !== target) {
+				anchor = anchor.parentNode;
+				if (anchor === null || !anchor.parentNode) return true;
+			}
+
+			newnode = source.cloneNode(true);
+			/*if (position.islast) {
+				sel.removeDOMmarkers("ghostedit_paste");
+				newnode.innerHTML = "<span id='ghostedit_paste_range_end'>&#x200b;</span>" + newnode.innerHTML;
+			}
+			else {
+				document.getElementById("ghostedit_paste_range_start").parentNode.removeChild(document.getElementById("ghostedit_paste_range_start"));
+			}*/
+			lasso().removeDOMmarkers("ghostedit_paste_start");
+			newnode.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t3'>&#x200b;</span>";
+			
+			_container.dom.addchild(target, "after", anchor, newnode);
+			
+			if (dummy && dummy.parentNode) dummy.parentNode.removeChild(dummy);
+			return true;
+			
+		}
+	};
+	
+	// TODO remove this function is favour of dom.isChildGhostBlock
+	_container.isChildGhostBlock = function (elem, childblocks) {
+		var i;
+		if (!elem) return false;
+		if (elem.nodeType !== 1) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === undefined) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === false) return false;
+		if (elem.getAttribute("data-ghostedit-elemtype") === null) return false;
+		for(i = 0; i < childblocks.length; i += 1) {
+			if (elem === childblocks[i]) {
+				return true;
+			}
+		}
+		return false;
+	};
+	
+	_container.create = function () {
+		var newElem;
+		// Create element, and assign id and content
+		newElem = document.createElement("div");
+		ghostedit.blockElemId += 1;
+		newElem.id = "ghostedit_container_" + ghostedit.blockElemId;
 		
-		    //return it
-		    return engine;
+		// Set GhostEdit handler attributes
+		newElem.setAttribute("data-ghostedit-iselem", "true");
+		newElem.setAttribute("data-ghostedit-elemtype", "container");
+		newElem.setAttribute("data-ghostedit-handler", "container");
 		
-		};
+		return newElem;
+	};
+	
+	_container.focus = function (target) {
+		var firstchild, handler;
+		if (!target || target.nodeType !== 1 || target.getAttribute("data-ghostedit-elemtype") !== "container") return false;
 		
-		window.ghostedit.util = _util;
+		// Get first child of container
+		firstchild = ghostedit.dom.getFirstChildGhostBlock (target);
+		if (!firstchild) return false;
+		
+		handler = firstchild.getAttribute("data-ghostedit-handler");
+		ghostedit.plugins[handler].focus(firstchild);
+		
+		return true;
+	};
+	
+	ghostedit.api.plugin.register("container", _container);
 })(window);

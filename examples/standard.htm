@@ -1,60 +1,49 @@
 <!DOCTYPE html>
 <html>
-        <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-                <!-- Include the GhostEdit stylesheet - contains things such as toolbar and other UI element layout styles -->
-                <link rel='stylesheet' media='screen' href='../ghostedit.css' />
-                <!-- IE 8 bug fix -->
-                <!--[if IE gte 8]>
-                <style type='text/css'>.ghostedit_editdiv [data-ghostedit-elemtype=textblock]:after {content: "\200b";}</style>
-                <![endif]-->
-        </head>
+<head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <!-- Include the GhostEdit stylesheet - contains things such as toolbar and other UI element layout styles -->
+        <link rel='stylesheet' media='screen' href='../dist/ghostedit-1.0rc1.css' />
+        <!-- IE 8 bug fix -->
+        <!--[if IE gte 8]>
+        <style type='text/css'>.ghostedit_rootnode [data-elemtype=textblock]:after {content: "\200b";}</style>
+        <![endif]-->
+</head>
 <body>
-<h1>Ghostedit Demo Page</h1><p>This page is designed to demonstrate how to set up GhostEdit.</p>
+<div id='mainwrap'>
+<h1>Ghostedit Demo Page</h1>
+<p>This page is designed to demonstrate how to set up GhostEdit.</p>
+<h2>Choose a UI</h2>
+<button onclick='ghostedit.api.plugin.enable("defaultui")'>Default UI</button>
+<button onclick='ghostedit.api.plugin.enable("minimalui")'>Minimal UI</button>
+<button onclick='ghostedit.event.trigger("ui:replace")'>None</button>
+<br /><br />
 
 <!-- Initial content. It is hidden as the editor copies the content, and it would display twice otherwise. -->
-<div id='ghostedit' style='display: none'>
+<div id='starting-content' style='display: none'>
 	<h1>Demo&nbsp;Content</h1>
 	<img src='http://nicoburns.com/static/images/design/me_bw_small_crop.jpg' alt='' title='' style='width:373px;height; 260px;float:right;clear:right;margin-left: 20px;clear:right' class=' leftimage' />
-	<p>Test Paragraph, in real usage you will want to fetch this from Mysql.</p>
-	<h2>Todo</h2>
-	<h3>UI</h3>
+	<p>Test <a href='http://en.wikipedia.org/wiki/paragraph'>paragraph</a>, in real usage you will want to fetch this from Mysql.</p>
+	<h2>Another heading</h2>
 	<ul>
-		<li><p>Export Api methods and hookup UI</p></li>
-		<li><p>Split out UI definitions for the plugins</p></li>
-		<li><p>Move UI specific functions out of the functionality plugins</p></li>
-	</ul>
-	<h3>Save and export</h3>
-	<ul>
-		<li>Seperate save function out into a plugin.</li>
-		<li>Move plugin specific code out of the export function.</li>
-	</ul>
-	<h3>Paste</h3>
-	<ul>
-		<li>Find out why it is crashing the browser</li>
+		<li><p>List item</p></li>
+		<li><p>Hello</p></li>
+		<li><p>...and another one!</p></li>
 	</ul>
 </div>
 
+
 <!-- Include scripts: the lasso selection library, the main ghostedit file, and the plugin files -->
-<script src='../source/lasso-1.4.0.js' type='text/javascript'></script>
-<script src='../source/ghostedit-core-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-save-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-textblock-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-container-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-defaultui-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-link-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-image-1.0b3.js' type='text/javascript'></script>
-<script src='../source/ghostedit-list-1.0b3.js' type='text/javascript'></script>
-
-
+<script src='../dist/ghostedit-1.0rc1.js' type='text/javascript'></script>
 
 <script type='text/javascript'>	
 	// ghostedit.init function is passed the id of the div containing the starting content and the options object.
-	// See documentation for full list of available options
-	ghostedit.init('ghostedit', {
+	ghostedit.init('starting-content', {
 		plugins: ["defaultui", "link", "image", "list"],
-		imageurl: "../../images/"
-        });
+		imageurl: "../images/",
+		height: "400px"
+    });
 	
 </script>
+</div>
 </body></html>

@@ -50,7 +50,7 @@
 		}
 		
 		if (linkplugin) {
-			_ui.insertbutton({label: "Insert Link", icon: "insert-link.png", action: function () { ghostedit.api.link.create(); }});
+			//_ui.insertbutton({label: "Insert Link", icon: "insert-link.png", action: function () { ghostedit.api.link.create(); }});
 		}
 		
 		if (listplugin) {

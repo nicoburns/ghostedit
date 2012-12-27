@@ -31,7 +31,7 @@ module.exports = function(grunt) {
         dest: 'dist/custom/<%= pkg.name %>-core-<%= pkg.version %>.js'
       },
       standard: {
-        src: ['<config:concat.core.dest>', 'src/plugins/*.js', 'src/ui/default.js', 'src/ui/standard.js'],
+        src: ['<config:concat.core.dest>', 'src/plugins/*.js', 'src/ui/default.js', 'src/ui/minimal.js'],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
       },
       css: {

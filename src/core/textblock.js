@@ -2,7 +2,9 @@
 	
 	var _textblock = {},
 	lasso = window.lasso,
-	ghostedit = window.ghostedit;
+	ghostedit = window.ghostedit,
+	console = window.console || {};
+	console.log = console.log || function () {};
 	
 	_textblock.enable = function () {
 				

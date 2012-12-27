@@ -180,8 +180,6 @@
 			// For each source child node, check if appropriate import handler exists, if so then call it on the node
 			for (i = 0; i < sourcenode.childNodes.length; i += 1) {
 				elem = sourcenode.childNodes[i];
-				//console.log("container import");
-				//console.log(elem.childNodes.length);
 				if (elem.nodeType !== 1 && elem.nodeType !== 3)  continue;
 				
 				tagname = (elem.nodeType === 3) ? "#textnode" : elem.tagName.toLowerCase();
@@ -251,8 +249,6 @@
 			var sel, anchor, newnode, dummy;
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return true;
 			if(position.isfirst || position.islast) return false;
-			
-			//DEV console.log("container paste handle");
 			
 			sel = ghostedit.selection.saved.data;
 			anchor = sel.clone().collapseToStart().getParentElement();
