@@ -7,6 +7,7 @@
 		buttons: [],
 		el: {}
 	},
+	lasso = window.lasso,
 	ghostedit = window.ghostedit;
 	
 	_image.enable = function () {
@@ -22,7 +23,11 @@
 		
 		
 		ghostedit.event.addListener ("selection:change", function () {
-			if (ghostedit.selection.saved.type !== "image") {
+			if (ghostedit.selection.saved.type === "image") {
+				lasso().clearSelection();
+				_image.el.keycapture.focus();
+			}
+			else {
 				_image.ui.hide();
 			}
 		});
@@ -60,7 +65,7 @@
 	
 	_image.event = {
 		keydown: function (e) {
-			e = (window.event) !== null ? window.event : e;
+			e = window.event ? window.event : e;
 			var keycode = e.keyCode !== null ? e.keyCode : e.charCode;
 			
 			switch(keycode) {
