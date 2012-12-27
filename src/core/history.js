@@ -28,7 +28,7 @@
 		
 		if (force !== true) force = false;
 		
-		ghostedit.event.trigger("presaveundostate");
+		ghostedit.event.trigger("history:save:before");
 		
 		// Localise undo variables
 		undoPoint = _history.undoPoint;
@@ -40,6 +40,7 @@
 		
 		// Start capturing current editor state
 		currentstate = {
+			id: "",
 			selection: {
 				"type": ghostedit.selection.saved.type,
 				//"data": ghostedit.selection.saved.type === "textblock" ? ghostedit.selection.saved.data.clone() : ghostedit.selection.saved.data
@@ -67,15 +68,13 @@
 				// Save new data and set undoPoint to point at it
 				_history.undoData.unshift(currentstate);
 				_history.undoPoint = 0;
-			
 			}
 			else {
 				_history.undoData[undoPoint] = currentstate;
 			}
-			
 		}
 		
-		ghostedit.event.trigger("postsaveundostate");
+		ghostedit.event.trigger("history:save:after");
 	};
 	
 	_history.restoreUndoPoint = function (undopoint) {
@@ -83,12 +82,15 @@
 		undostate = undoData[undopoint];
 		if (!undostate || undostate.content.string.length < 1) return false;
 		
+		ghostedit.event.trigger("history:restore:before");
 		
-		ghostedit.el.rootnode.innerHTML = "";//undoData[undopoint].selectioncontent;
+		ghostedit.el.rootnode.innerHTML = "";
 		ghostedit.el.rootnode.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
 		
 		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
-		ghostedit.selection.save();
+		//ghostedit.selection.save();
+		
+		ghostedit.event.trigger("history:restore:after");
 	};
 	
 	_history.undo = function () {
@@ -96,31 +98,30 @@
 		undoData = _history.undoData,
 		editwrap = ghostedit.el.rootnode;
 		
-		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
-			
-			ghostedit.event.trigger("history:undo:before");
-
-			// There are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
-			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
-				_history.saveUndoState();
-				undoPoint = 1;
-			}
-			// Current state already saved, revert to previous saved one (undoPoint + 1)
-			else {
-				if (undoPoint === 0) {
-					_history.saveUndoState();
-				}
-				undoPoint = _history.undoPoint;
-				undoPoint+=1;
-			}
-			
-			_history.restoreUndoPoint(undoPoint);
-			
-			_history.undoPoint = undoPoint;
-			_history.undoData = undoData;
-
-			ghostedit.event.trigger("history:undo:after");
+		if (undoData[undoPoint+1] === undefined ||
+			undoData[undoPoint+1].content.string.length <= 0) return;
+		// if (undoPoint < _history.undolevels  - 1) return; //unlimited undo levels
+		
+		ghostedit.event.trigger("history:undo:before");
+		// If there are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
+		if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
+			_history.saveUndoState();
+			undoPoint = 1;
 		}
+		// Else, current state already saved, revert to previous saved one (undoPoint + 1)
+		else {
+			if (undoPoint === 0) {
+				_history.saveUndoState();
+			}
+			undoPoint = _history.undoPoint;
+			undoPoint += 1;
+		}
+
+		_history.restoreUndoPoint(undoPoint);
+		_history.undoPoint = undoPoint;
+		_history.undoData = undoData;
+
+		ghostedit.event.trigger("history:undo:after");
 	};
 	
 	_history.redo = function () {

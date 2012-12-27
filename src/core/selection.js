@@ -167,7 +167,7 @@
 			
 			// Make sure rootnode is also included in path
 			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
-					_selection.nodepath.push(elem);
+				_selection.nodepath.push(elem);
 			}
 		};
 		

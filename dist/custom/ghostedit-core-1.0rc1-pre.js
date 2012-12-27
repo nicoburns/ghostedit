@@ -5,7 +5,7 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1-pre
-Release Date:      2012-12-20
+Release Date:      2012-12-27
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
@@ -1925,7 +1925,7 @@ window.lasso = function() {
 			
 			// Make sure rootnode is also included in path
 			if (elem && elem.getAttribute("data-ghostedit-isrootnode") === "true") {
-					_selection.nodepath.push(elem);
+				_selection.nodepath.push(elem);
 			}
 		};
 		
@@ -2059,7 +2059,7 @@ window.lasso = function() {
 		
 		if (force !== true) force = false;
 		
-		ghostedit.event.trigger("presaveundostate");
+		ghostedit.event.trigger("history:save:before");
 		
 		// Localise undo variables
 		undoPoint = _history.undoPoint;
@@ -2071,6 +2071,7 @@ window.lasso = function() {
 		
 		// Start capturing current editor state
 		currentstate = {
+			id: "",
 			selection: {
 				"type": ghostedit.selection.saved.type,
 				//"data": ghostedit.selection.saved.type === "textblock" ? ghostedit.selection.saved.data.clone() : ghostedit.selection.saved.data
@@ -2098,15 +2099,13 @@ window.lasso = function() {
 				// Save new data and set undoPoint to point at it
 				_history.undoData.unshift(currentstate);
 				_history.undoPoint = 0;
-			
 			}
 			else {
 				_history.undoData[undoPoint] = currentstate;
 			}
-			
 		}
 		
-		ghostedit.event.trigger("postsaveundostate");
+		ghostedit.event.trigger("history:save:after");
 	};
 	
 	_history.restoreUndoPoint = function (undopoint) {
@@ -2114,12 +2113,15 @@ window.lasso = function() {
 		undostate = undoData[undopoint];
 		if (!undostate || undostate.content.string.length < 1) return false;
 		
+		ghostedit.event.trigger("history:restore:before");
 		
-		ghostedit.el.rootnode.innerHTML = "";//undoData[undopoint].selectioncontent;
+		ghostedit.el.rootnode.innerHTML = "";
 		ghostedit.el.rootnode.appendChild(ghostedit.dom.cloneContent(undostate.content.dom));
 		
 		ghostedit.selection.restore (undostate.selection.type, undostate.selection.data);
-		ghostedit.selection.save();
+		//ghostedit.selection.save();
+		
+		ghostedit.event.trigger("history:restore:after");
 	};
 	
 	_history.undo = function () {
@@ -2127,31 +2129,30 @@ window.lasso = function() {
 		undoData = _history.undoData,
 		editwrap = ghostedit.el.rootnode;
 		
-		if (/*undoPoint < _history.undolevels  - 1 && //unlimited undo levels*/undoData[undoPoint+1] !== undefined && undoData[undoPoint+1].content.string.length > 0) {
-			
-			ghostedit.event.trigger("history:undo:before");
-
-			// There are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
-			if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
-				_history.saveUndoState();
-				undoPoint = 1;
-			}
-			// Current state already saved, revert to previous saved one (undoPoint + 1)
-			else {
-				if (undoPoint === 0) {
-					_history.saveUndoState();
-				}
-				undoPoint = _history.undoPoint;
-				undoPoint+=1;
-			}
-			
-			_history.restoreUndoPoint(undoPoint);
-			
-			_history.undoPoint = undoPoint;
-			_history.undoData = undoData;
-
-			ghostedit.event.trigger("history:undo:after");
+		if (undoData[undoPoint+1] === undefined ||
+			undoData[undoPoint+1].content.string.length <= 0) return;
+		// if (undoPoint < _history.undolevels  - 1) return; //unlimited undo levels
+		
+		ghostedit.event.trigger("history:undo:before");
+		// If there are unsaved changes, save current content and revert to last saved undopoint (was 0, but now 1 because current state saved in 0)
+		if (undoData[undoPoint].content.string !== editwrap.innerHTML) {
+			_history.saveUndoState();
+			undoPoint = 1;
 		}
+		// Else, current state already saved, revert to previous saved one (undoPoint + 1)
+		else {
+			if (undoPoint === 0) {
+				_history.saveUndoState();
+			}
+			undoPoint = _history.undoPoint;
+			undoPoint += 1;
+		}
+
+		_history.restoreUndoPoint(undoPoint);
+		_history.undoPoint = undoPoint;
+		_history.undoData = undoData;
+
+		ghostedit.event.trigger("history:undo:after");
 	};
 	
 	_history.redo = function () {
@@ -2484,14 +2485,14 @@ window.lasso = function() {
 		ghostedit.inout.registerimporthandler (_textblock.inout.importHTML, "#textnode", "b", "strong", "i", "em", "u", "strike", "span");
 		
 		// Bookmarkify (serialize) the selection, and save the bookmark to the lasso object
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
 				ghostedit.selection.saved.data.bookmarkify(ghostedit.el.rootnode);
 			}
 		});
 		
 		// Clone range object after undo save to avoid accidentally modifying the saved range objects
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
 				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone();
 			}
@@ -2570,7 +2571,7 @@ window.lasso = function() {
 			else {
 				_textblock.split(elem);
 			}
-			ghostedit.history.saveUndoState(true);
+			ghostedit.history.saveUndoState();
 			
 			ghostedit.util.cancelEvent ( e );
 			return true;
@@ -2601,7 +2602,7 @@ window.lasso = function() {
 						//alert(target.id);
 						ghostedit.plugins[handler].dom.removechild(parent, target);
 					}
-					ghostedit.history.saveUndoState(true);
+					ghostedit.history.saveUndoState();
 					return true;
 				case "behind":
 					block = ghostedit.selection.getContainingGhostBlock();

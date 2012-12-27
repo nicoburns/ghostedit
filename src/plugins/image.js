@@ -11,8 +11,8 @@
 	
 	_image.enable = function () {
 		// Register event listeners
-		ghostedit.event.addListener ("history:undo:before", function () { _image.unfocus(); });
-		ghostedit.event.addListener ("history:redo:before", function () { _image.unfocus(); });
+		//ghostedit.event.addListener ("history:undo:before", function () { _image.unfocus(); });
+		//ghostedit.event.addListener ("history:redo:before", function () { _image.unfocus(); });
 		//ghostedit.event.addListener ("export:before", function () { _image.unfocus(); });
 		
 		ghostedit.event.addListener ("history:undo:after", function () { _image.applyeventlisteners(); });

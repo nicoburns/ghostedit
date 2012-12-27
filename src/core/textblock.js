@@ -12,14 +12,14 @@
 		ghostedit.inout.registerimporthandler (_textblock.inout.importHTML, "#textnode", "b", "strong", "i", "em", "u", "strike", "span");
 		
 		// Bookmarkify (serialize) the selection, and save the bookmark to the lasso object
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
 				ghostedit.selection.saved.data.bookmarkify(ghostedit.el.rootnode);
 			}
 		});
 		
 		// Clone range object after undo save to avoid accidentally modifying the saved range objects
-		ghostedit.event.addListener("postsaveundostate", function () {
+		ghostedit.event.addListener("history:save:after", function () {
 			if (ghostedit.selection.saved.type === "textblock") {
 				ghostedit.selection.saved.data = ghostedit.selection.saved.data.clone();
 			}
@@ -98,7 +98,7 @@
 			else {
 				_textblock.split(elem);
 			}
-			ghostedit.history.saveUndoState(true);
+			ghostedit.history.saveUndoState();
 			
 			ghostedit.util.cancelEvent ( e );
 			return true;
@@ -129,7 +129,7 @@
 						//alert(target.id);
 						ghostedit.plugins[handler].dom.removechild(parent, target);
 					}
-					ghostedit.history.saveUndoState(true);
+					ghostedit.history.saveUndoState();
 					return true;
 				case "behind":
 					block = ghostedit.selection.getContainingGhostBlock();
