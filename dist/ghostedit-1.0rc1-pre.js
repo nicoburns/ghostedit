@@ -2268,6 +2268,7 @@ window.lasso = function() {
 		ghostedit.history.undoData = _paste.savedundodata;
 		ghostedit.history.undoPoint = _paste.savedundopoint;
 		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
+		ghostedit.selection.save();
 		
 		console.log(ghostedit.selection.saved);
 		// Delete selection contents if selection is non-collapsed
