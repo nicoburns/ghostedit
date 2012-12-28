@@ -279,6 +279,7 @@
 		ghostedit.history.undoData = _cut.savedundodata;
 		ghostedit.history.undoPoint = _cut.savedundopoint;
 		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
+		ghostedit.selection.save();
 		
 		// Delete selection contents if selection is non-collapsed
 		ghostedit.selection.deleteContents();
