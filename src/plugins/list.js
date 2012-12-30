@@ -131,7 +131,7 @@
 			if (elemtype === "list") {
 				if (sourcedirection === "ahead" || sourcedirection === "behind") {
 					newtarget = (sourcedirection === "ahead") ? ghostedit.dom.getLastChildGhostBlock(target) : ghostedit.dom.getFirstChildGhostBlock(target);
-					return _list.ghostevent("delete", newtarget, sourcedirection, params);
+					return _list.dom.deleteevent(newtarget, sourcedirection, params);
 				}
 				else return false;
 			}
@@ -391,19 +391,22 @@
 	
 	_list.paste = {
 		handle: function (target, source, position) {
-			var anchor, result, sourcelistitem, sourcetextblock, targetlistitem, targettextblock,
-			nextitem, node1, node2, startblock, endblock, firstitem, item;
+			var anchor, splitpoint, result, sourcelistitem, sourcetextblock, targetlistitem, targettextblock,
+			nextitem, node1, node2, startblock, endblock, firstitem, item,
+			selrange, firstchildblock, lastchildblock, startofblock, endofblock,
+			atverystart = false, atveryend = false, wheretoinsert;
 			
-			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
-			if (source.tagName.toLowerCase() !== "ol" && source.tagName.toLowerCase() !== "ul") return false;
+			if (!_list.isList(target)) return false;
 			
-			// Handle case where source list type is different to target list type
-			if (source.tagName !== target.tagName) {
+			
+			// Handle case where source where source node isn't a list or list type is different to target list type
+			if (!_list.isList(source) || source.tagName !== target.tagName) {
 				
-				anchor = ghostedit.selection.saved.data.clone().collapseToStart().getParentNode();
-				while (!ghostedit.dom.isChildGhostBlock(anchor, target)) anchor = ghostedit.dom.getParentGhostBlock(anchor);
+				splitpoint = ghostedit.selection.saved.data.clone();
+				if (position.isfirst) splitpoint.collapseToStart();
+				else if (position.islast) splitpoint.collapseToEnd();
 				
-				result = _list.split(target, "after", anchor);
+				result = _list.split(target, splitpoint);
 				
 				switch (result) {
 					case false:
@@ -432,11 +435,47 @@
 			}
 			
 			// Else, lists are of same type:
+			console.log("Lists same type");
+			console.log(position);
 			
-			startblock = ghostedit.selection.saved.data.clone().collapseToStart().getParentNode();
+			// Temporary selection range to avoid changing actual saved range
+			if (ghostedit.selection.saved.type !== "textblock") return;
+			selrange = ghostedit.selection.saved.data.clone();
+			
+			// Get first and last child ghostblock
+			firstchildblock = ghostedit.dom.getFirstChildGhostBlock(target);
+			lastchildblock = ghostedit.dom.getLastChildGhostBlock(target);
+			
+			// Ranges representing the start and end of the block
+			startofblock = lasso().setCaretToStart(firstchildblock);
+			endofblock = lasso().setCaretToEnd(lastchildblock);
+			
+			// If selrange starts before or at block, set startblock to the first child ghostblock
+			if (selrange.compareEndPoints("StartToStart", startofblock) !== 1) {
+				atverystart = true;
+				startblock = firstchildblock;
+			}
+			// Otherwise, set child ghostblock containing the start of the selection
+			else {
+				startblock = selrange.getStartNode();
+				//if (!ghostedit.dom.isGhostBlock(startblock)) startblock = ghostedit.dom.getParentGhostBlock(startblock);
+			}
+			
+			// If selrange ends after or at block, set endblock to the last child ghostblock
+			if (selrange.compareEndPoints("EndToEnd", endofblock) !== -1) {
+				atveryend = true;
+				endblock = lastchildblock;
+			}
+			// Otherwise, set child ghostblock containing the end of the selection
+			else {
+				endblock = selrange.getEndNode();
+				//if (!ghostedit.dom.isGhostBlock(endblock)) endblock = ghostedit.dom.getParentGhostBlock(endblock);
+			}
+			
+			//startblock = ghostedit.selection.saved.data.clone().collapseToStart().getParentNode();
 			while (!ghostedit.dom.isGhostBlock(startblock)) startblock = ghostedit.dom.getParentGhostBlock(startblock);
-			endblock = ghostedit.selection.saved.data.clone().collapseToEnd().getParentNode();
-			while (!ghostedit.dom.isGhostBlock(startblock)) startblock = ghostedit.dom.getParentGhostBlock(startblock);
+			//endblock = ghostedit.selection.saved.data.clone().collapseToEnd().getParentNode();
+			while (!ghostedit.dom.isGhostBlock(endblock)) endblock = ghostedit.dom.getParentGhostBlock(endblock);
 			
 			// If first pasted element, try to merge contents of first <li>
 			if (position.isfirst) {
@@ -444,10 +483,14 @@
 				sourcetextblock = ghostedit.dom.getFirstChildGhostBlock(sourcelistitem);
 				
 				targettextblock = startblock;
+				if (targettextblock.tagName.toLowerCase() === "li") targettextblock = ghostedit.dom.getFirstChildGhostBlock(targettextblock);
 				targetlistitem = ghostedit.dom.getParentGhostBlock(targettextblock);
 				
-				if (sourcetextblock.tagName === targettextblock.tagName) {
-				
+				result = ghostedit.plugins.textblock.paste.handle(targettextblock, sourcetextblock, {isfirst: true});
+				if (result) {
+					source.removeChild(sourcelistitem);
+				}
+				/*if (sourcetextblock.tagName === targettextblock.tagName) {
 					targettextblock.innerHTML += sourcetextblock.innerHTML;
 					ghostedit.plugins.textblock.mozBrs.tidy(targettextblock);
 					source.removeChild(sourcelistitem);
@@ -470,43 +513,71 @@
 						ghostedit.plugins.textblock.mozBrs.tidy(targettextblock);
 						startblock = targetlistitem;
 					}
-				}
+				}*/
 			}
-			
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			//ghostedit.selection.saved.data.select().inspect();
+			//return true;
+
 			// If last pasted element, try to merge contents of last <li>
-			if (position.islast && ghostedit.dom.getLastChildGhostBlock(source)) {
+			if (position.islast /*&& (!position.isfirst || !result) && startblock !== endblock /* */ && ghostedit.dom.getLastChildGhostBlock(source)) {
 				sourcelistitem = ghostedit.dom.getLastChildGhostBlock(source);
 				sourcetextblock = ghostedit.dom.getFirstChildGhostBlock(sourcelistitem);
 				
 				targettextblock = endblock;
+				if (targettextblock.tagName.toLowerCase() === "li") targettextblock = ghostedit.dom.getFirstChildGhostBlock(targettextblock);
 				
-				if (sourcetextblock.tagName === targettextblock.tagName) {
+				console.log(sourcetextblock);
+				console.log(targettextblock);
+				if (startblock === endblock) {
+					ghostedit.plugins.textblock.paste.split(targettextblock);
+					//^^splits textblock and tidies up selection markers
+				}
+				result = ghostedit.plugins.textblock.paste.handle(targettextblock, sourcetextblock, {isfirst: false, islast: true});
+				if (result) {
+					source.removeChild(sourcelistitem);
+				}
+				
+				/*if (sourcetextblock.tagName === targettextblock.tagName) {
 					lasso().removeDOMmarkers("ghostedit_paste_end");
 					targettextblock.innerHTML = sourcetextblock.innerHTML + "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + targettextblock.innerHTML;
 					source.removeChild(sourcelistitem);
 					
 					ghostedit.plugins.textblock.mozBrs.tidy(targettextblock);
-				}
+				}*/
 			}
 			
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			//ghostedit.selection.saved.data.select().inspect();
+			//return true;
+			
 			anchor = startblock;
+			wheretoinsert = atverystart ? "before" : "after";
 			firstitem = item = ghostedit.dom.getFirstChildGhostBlock(source);
 			
 			while ((item = ghostedit.dom.getFirstChildGhostBlock(source))) {
-				_list.dom.addchild(target, "after", anchor, item);
+				_list.dom.addchild(target, wheretoinsert, anchor, item);
+				wheretoinsert = "after";
 				anchor = item;
 			}
 			
-			if (!position.isfirst) {
+			if (!position.isfirst && !atverystart) {
 				lasso().removeDOMmarkers("ghostedit_paste_start");
 				anchor.innerHTML += "<span id='ghostedit_paste_start_range_start'>&#x200b;</span>";
+				if (anchor.tagName.toLowerCase() === "li") anchor = ghostedit.dom.getFirstChildGhostBlock(anchor);
 				ghostedit.plugins.textblock.mozBrs.tidy(anchor);
 			}
-			
-			if (!position.islast) {
+
+			/*if (!position.islast && !atveryend) {
 				lasso().removeDOMmarkers("ghostedit_paste_end");
 				endblock.innerHTML = endblock.innerHTML + "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>";
-			}
+			}*/
 			
 			return true;
 		}
@@ -595,6 +666,7 @@
 		// If lists are same node, return that node
 		if (list1 === list2) return list1;
 		
+		// If lists are not lists but listitems, call mergeItems function
 		if (!_list.isList(list1) || !_list.isList(list2)) {
 			if (_list.isListItem(list1) && _list.isListItem(list2)) {
 				return _list.mergeItems(list1, list2, collapse);
@@ -640,8 +712,60 @@
 		return result;
 	};
 	
+	/* Either a range or a listitem can be passed as the split point
+	 * So arguments are either (list, "before", listitem), (list, "after", listitem) or (list, range)
+	 */
 	_list.split = function (target, beforeOrAfter, anchor) {
-		var firstitem, lastitem, newlist, node, parent, handler;
+		var firstitem, lastitem, newlist, node, parent, handler, blocks,
+		splitpoint,
+		firstchildblock, lastchildblock, startofblock, endofblock, atverystart, atveryend, startblock, endblock;
+		
+		// Handle case where range is passed instead of beforeOrAfter+anchor
+		if (typeof beforeOrAfter === "object" && beforeOrAfter.isLassoObject) {
+			splitpoint = beforeOrAfter.clone().collapseToStart();
+			
+			// Ranges representing the start and end of the block
+			startofblock = lasso().setCaretToStart(ghostedit.dom.getFirstChildGhostBlock(target));
+			endofblock = lasso().setCaretToEnd(ghostedit.dom.getLastChildGhostBlock(target));
+			
+			// If splitpoint starts before (or at) block or ends after (or at) block, do nothing and return
+			if (splitpoint.compareEndPoints("StartToStart", startofblock) !== 1) return "atverystart";
+			if (splitpoint.compareEndPoints("EndToEnd", endofblock) !== -1) return "atveryend";
+			
+			// Get the GhostBlock that the splitpoint is in
+			anchor = splitpoint.getParentNode();
+			while (!ghostedit.dom.isGhostBlock(anchor)) anchor = ghostedit.dom.getParentGhostBlock(anchor);
+			
+			// If splitpoint is in the actual list item, then get listitem after and continue
+			if (_list.isList(anchor)) {
+				// continue below
+				//TODO detect where in list range is
+			}
+			// If splitpoint is in a list item, then make that the anchor and continue
+			else if (_list.isListItem(anchor)) {
+				// continue below
+				//TODO detect whether range is at start or end of list item
+				beforeOrAfter = "";
+			}
+			// If splitpoint is in a textblock, then check if at very start or end, else split at splitpoint and continue
+			else if (ghostedit.plugins.textblock.isTextBlock(anchor)) {
+				console.log("TEST");
+				if (ghostedit.plugins.textblock.selection.isAtStartOfTextBlock(splitpoint)) {
+					beforeOrAfter = "before";
+				}
+				else if (ghostedit.plugins.textblock.selection.isAtEndOfTextBlock(splitpoint)) {
+					beforeOrAfter = "after";
+				}
+				else {
+					blocks = ghostedit.plugins.textblock.paste.split(anchor, splitpoint);
+					anchor = ghostedit.dom.getParentGhostBlock(blocks.block2);
+					beforeOrAfter = "before";
+				}
+			}
+		}
+		
+		
+		
 		if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isChildGhostBlock(anchor, target)) return false;
 		if (beforeOrAfter !== "before") beforeOrAfter = "after";
 		
@@ -661,7 +785,6 @@
 				if (node === anchor) break;
 				newlist.appendChild(node);
 				node = ghostedit.dom.getFirstChildGhostBlock(target);
-				
 			}
 		}
 		else {

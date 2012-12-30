@@ -151,15 +151,15 @@
 			
 			// If the first and last elements in the selection are the same type, then merge
 			if(startcblock.getAttribute("data-ghostedit-elemtype") === endcblock.getAttribute("data-ghostedit-elemtype")) {
+				lasso().setToSelection().saveToDOM("ghostedit_container_deleteselection");
 				ghostedit.plugins[startcblock.getAttribute("data-ghostedit-elemtype")].merge(startcblock, endcblock, collapse);
-				if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
+				lasso().restoreFromDOM("ghostedit_container_deleteselection").select();
+				//if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
 				//^^tests whether endcblock is still in the document, i.e. whether a merge took place
 			}
 			
+			// If container has no children left, create empty <p> element
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
-				dummynode = document.getElementById('ghostedit_dummynode');
-				lasso().selectNodeContents(dummynode).select();*/
 				container.appendChild(ghostedit.textblock.create("p"));
 			}
 			
@@ -247,8 +247,8 @@
 	_container.paste = {
 		handle: function (target, source, position) {
 			var sel, anchor, newnode, dummy;
-			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return true;
-			if(position.isfirst || position.islast) return false;
+			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return false;
+			//if (position.isfirst || position.islast) return false;
 			
 			sel = ghostedit.selection.saved.data;
 			anchor = sel.clone().collapseToStart().getParentElement();

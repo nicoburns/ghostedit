@@ -112,9 +112,12 @@
 		console.log("test--------------------------------");
 		// Call handler on first pasted node
 		result = false;
-		_paste.trycounter = 0;
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
 		target = ghostedit.selection.saved.data.getParentNode();
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		//ghostedit.selection.saved.data.select();
 		if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
 		while (!result) {
 			if (!target) {
@@ -126,11 +129,11 @@
 			if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
 			
 			position = {"isfirst": true,
-				"islast": (ghostedit.dom.getFirstChildGhostBlock(pastenode) === source) ? true : false,
+				"islast": (ghostedit.dom.getLastChildGhostBlock(pastenode) === source) ? true : false,
 				"collapsed": collapsed};
 			
 			console.log("Call handler: (first)" + handler);
-			console.log(source);
+			console.log(source.cloneNode(true));
 			result = ghostedit.plugins[handler].paste.handle (target, source, position);
 			console.log("result: " + result);
 			if (result) {
@@ -140,24 +143,37 @@
 			}
 			if (!result) target = ghostedit.dom.getParentGhostBlock(target);
 			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			//ghostedit.selection.saved.data.select();
 		}
-
+		
+		
+		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		ghostedit.selection.saved.data.select().inspect();
+		//return;
 		
 		// Call handler on last pasted node
 		source = ghostedit.dom.getLastChildGhostBlock(pastenode);
-		if (source && (collapsed === false || hasmerged === false)) {
-			_paste.trycounter = 0;
+		if (source /*&& (collapsed === false || hasmerged === false)*/) {
 			result = false;
 			
-			if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
+			/*if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
 			}
 			else {
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			}*/
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 			}
-			target = ghostedit.selection.saved.data.getParentNode();
+			target = ghostedit.selection.saved.data.getEndNode();
 			if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
-			
 			while (!result) {
 				
 				//ghostedit.selection.saved.data.select();
@@ -167,7 +183,8 @@
 				if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
 
 				console.log("Call handler (last): " + handler);
-				console.log(source);
+				console.log(source.cloneNode(true));
+				console.log(target);
 				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": true, "collapsed": collapsed});
 				console.log("result: " + result);
 				if (result) {
@@ -175,31 +192,38 @@
 					break;
 				}
 				if (!result) target = ghostedit.dom.getParentGhostBlock(target);
-				if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
+				/*if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
 				}
 				else {
 					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-				}
-				
-				if (_paste.trycounter++ > 20) return;
-			}
-		}
-		
-		// Loop through remaining nodes
-		console.log(pastenode);
-		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
-		_paste.trycounter = 0;
-		while (source) {
-			result = false;
-			while (!result) {
+				}*/
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
 				if (lasso().isSavedRange("ghostedit_paste_end")) {
 					ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 				}
-				ghostedit.selection.saved.data.select();
-				
-				target = ghostedit.selection.saved.data.getParentNode();
+			}
+		}
+		
+		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		ghostedit.selection.saved.data.select().inspect();
+		//return;
+		
+		// Loop through remaining nodes
+		console.log(pastenode);
+		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
+		while (source) {
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			target = ghostedit.selection.saved.data.getParentNode();
+			result = false;
+			while (!result) {
+				//ghostedit.selection.saved.data.select();
 				if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
 				if (!target) break;
 				
@@ -210,32 +234,23 @@
 				console.log(source);
 				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": false, "collapsed": collapsed});
 				console.log("result: " + result);
-				if (_paste.trycounter++ > 20) return;
+				if (result) {
+					source.parentNode.removeChild(source);
+					break;
+				}
+				if (!result) target = ghostedit.dom.getParentGhostBlock(target);
+				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+				if (lasso().isSavedRange("ghostedit_paste_end")) {
+					ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+				}
 			}
-			
-			source = ghostedit.dom.getNextSiblingGhostBlock(source);
+			source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
 		}
 		
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", true).select();
 		if (ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", true).select();
 		}
-
-		/*if (!result) {
-			i--;
-			blocks = ghostedit.plugins[handler].split(target);
-			//range = lasso().setStartToRangeStart(lasso().selectNodeContents(blocks.block1));
-			//range.setEndToRangeEnd(lasso().selectNodeContents(blocks.block2));
-			//elem = range.getParentNode();
-			//if (!ghostedit.dom.isGhostBlock(elem)) ghostedit.dom.getParentGhostBlock(elem);
-			target = ghostedit.dom.getParentGhostBlock(blocks.block1);
-			child = blocks.block1;
-			while (!ghostedit.dom.isChildGhostBlock(child, target)) {
-				child = ghostedit.dom.getParentGhostBlock(child);
-			}
-			handler = target.getAttribute("data-ghostedit-handler");
-		}*/
-		
 		ghostedit.selection.save();
 		
 		ghostedit.history.undoData = _paste.savedundodata;

@@ -50,7 +50,7 @@
 		},
 		
 		backspace: function (block, e) {
-			if (_textblock.selection.isAtStartOftextblock() !== true) {
+			if (_textblock.selection.isAtStartOfTextBlock() !== true) {
 				//Caret not at start of textblock: return true to indicate handled
 				return true;
 			}
@@ -77,7 +77,7 @@
 		
 		deletekey: function (block, e) {
 			//var block = ghostedit.selection.getContainingGhostBlock();
-			if (_textblock.selection.isAtEndOftextblock() !== true) {
+			if (_textblock.selection.isAtEndOfTextBlock() !== true) {
 				//Caret not at end of textblock: return true to indicate handled
 				return true;
 			}
@@ -216,11 +216,20 @@
 		
 		
 		//Assumes selection saved manually
-		isAtStartOftextblock: function () {
-			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode;
+		isAtStartOfTextBlock: function (point) {
+			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode,
+			useselection;
+			
+			// Check if 'point' parameter was passed and is a lasso object, otherwise get selection
+			useselection = false;
+			if (!point || !point.isLassoObject) {
+				if (ghostedit.selection.saved.type !== "textblock") return false;
+				point = ghostedit.selection.saved.data;
+				useselection = true;
+			}
 			
 			if(document.createRange) {
-				range = ghostedit.selection.savedRange;
+				range = point;
 				if(range.isCollapsed() && range.getNative().startOffset === 0) {
 					caretIsAtStart = true;
 					tempnode = ghostedit.selection.savedRange.getStartNode();
@@ -257,7 +266,7 @@
 			}
 			else if (document.selection) {
 				// Bookmarkify range, so DOM modification doesn't break it
-				selrange = ghostedit.selection.savedRange.clone().bookmarkify();
+				selrange = point.clone().bookmarkify();
 				
 				textblocknode = _textblock.selection.getStartTextBlockNode();
 				
@@ -272,14 +281,16 @@
 						caretIsAtStart = true;
 				}
 				
-				ghostedit.selection.savedRange = selrange.select();
+				if (useselection) {
+					ghostedit.selection.savedRange = selrange.select();
+				}
 			}
 			return caretIsAtStart;
 		},
 
 		
 		//Assumes selection saved manually
-		isAtEndOftextblock: function () {
+		isAtEndOfTextBlock: function () {
 			var caretIsAtEnd = false, selrange, range, rangefrag, elemfrag, textblocknode, endpoint;
 			
 			if (!ghostedit.selection.savedRange.isCollapsed()) return false;
@@ -579,101 +590,27 @@
 			
 			// Else return false
 			return false;
-		},
-		
-		parse: function (node) {
-			var cleannode = false, nodes, cleanchild, nodetype, i, text;
-			if (!node || !node.nodeType) return false;
-			
-			nodetype = _textblock.inout.isHandleableNode(node);
-			switch (nodetype) {
-				case "text":
-					// Strip whitespace and tab characters from textnodes
-					text = node.nodeValue.replace(/[\n\r\t]/g,"");
-					// Return node, or false if node is empty
-					return (text.length > 0) ? document.createTextNode(text) : false;
-				case "block":
-				case "child":
-					cleannode = document.createElement(node.tagName.toLowerCase());
-				/*case "contents":
-					Do nothing*/
-			}
-
-			// For 'block', 'child' and 'contents' nodes: recurse on children and append
-			cleannode = cleannode || document.createDocumentFragment();
-			nodes = node.childNodes;
-			for (i = 0; i < nodes.length; i++) {
-				cleanchild = _textblock.inout.parse(nodes[i]);
-				if (cleanchild) cleannode.appendChild(cleanchild);
-			}
-			return cleannode;
 		}
 	};
 	
 	_textblock.paste = {			
 		handle: function (target, source, position) {
-			var blocks;
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
 			
 			console.log(position);
 			
 			// If source is first pasted element, and was inline content, or is of same type as target, then merge contents into target node
-			// No longer needed because is subset of 'p' check: source.getAttribute("data-ghostedit-importinfo") === "wasinline"
 			if (position.isfirst) {
-				if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
-					console.log("paste (first):");
-					
-					_textblock.mozBrs.clear(source);
-					
-					lasso().removeDOMmarkers("ghostedit_paste_start");
-					source.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t1'>&#x200b;</span>";
-					
-					if (document.createRange) {
-						ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
-					}
-					else {
-						ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
-					}
-					
-					return true;
-				}
-				else {
-					return false;
-				}
+				return _textblock.paste.handleFirst(target, source, position);
 			}
 			
 			if (position.islast) {
-				if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
-					console.log("paste (last-noncollapsed):");
-					
-					_textblock.mozBrs.clear(source);
-					lasso().removeDOMmarkers("ghostedit_paste_end");
-					source.innerHTML += "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>";
-					
-					if (document.createRange) {
-						ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
-					}
-					else {
-						ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
-					}
-					
-					return true;
-				}
-				else {
-					return false;
-				}
+				return _textblock.paste.handleLast(target, source, position);
 			}
 			
-			
-			
-			// If not first element, then split and tidy
-			_textblock.mozBrs.clear(source);
-			ghostedit.selection.saved.data.collapseToStart().select();
-			lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
-			blocks = _textblock.split(target);
-			blocks.block1.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t2'>&#x200b;</span>";
-			_textblock.mozBrs.tidy(blocks.block1);
-			
+			_textblock.paste.split(target);
+			return false;
+						
 			/*if (!position.islast || !(source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) && _textblock.isEmpty(blocks.block2)) {
 				parent = ghostedit.dom.getParentGhostBlock(blocks.block2);
 				handler = parent.getAttribute("data-ghostedit-handler");
@@ -688,11 +625,10 @@
 				return false;
 			}*/
 			
-			//if (position.collapsed) {
-				lasso().removeDOMmarkers("ghostedit_paste_end");
-				blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
-			//}
-			_textblock.mozBrs.tidy(blocks.block2);
+			/*PART OF SPLIT FUNCTION
+			lasso().removeDOMmarkers("ghostedit_paste_end");
+			blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
+			_textblock.mozBrs.tidy(blocks.block2);*/
 			
 			// If source is last pasted element, and was inline content, or is of same type as target, then prepend contents to second node
 			/*if (position.islast && (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName)) {
@@ -706,55 +642,91 @@
 			
 			
 			//DEV console.log(blocks.block1.parentNode.cloneNode(true));
-			
-			return false;
 		},
 		
-		clean: function (target) {
-			var content, cleanchild, i;
-			if (!target || !target.nodeType) return false;
-			
-			// If target is empty, return target
-			if (!target.childNodes) return target;
-			
-			// Else loop through content, getting clean versions of each child node recursively
-			content = document.createDocumentFragment();
-			for (i = 0; i < target.childNodes.length; i++) {
-				cleanchild = _textblock.paste.cleanChild(target.childNodes[i]);
-				if (cleanchild)	content.appendChild(cleanchild);
+		handleFirst: function (target, source, position) {
+			// No longer needed because is subset of 'p' check: source.getAttribute("data-ghostedit-importinfo") === "wasinline"
+			if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
+				console.log("paste (first):");
+				
+				_textblock.mozBrs.clear(source);
+				
+				lasso().removeDOMmarkers("ghostedit_paste_start");
+				source.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t1'>&#x200b;</span>";
+				
+				if (document.createRange) {
+					ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
+				}
+				else {
+					ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
+				}
+				
+				return true;
 			}
-			
-			// Replace target content with new content
-			target = target.cloneNode(false);
-			target.appendChild(content);
-			
-			return target;
+			else {
+				return false;
+			}
 		},
 		
-		cleanNode: function (node) {
-			var cleannode, nodes, cleanchild, nodetype, i;
-			if (!node || !node.nodeType) return false;
-			
-			nodetype = _textblock.paste.isHandleableNode(node);
-			switch (nodetype) {
-				case "text":
-					// Strip whitespace and tab characters from textnodes
-					node.nodeValue = node.nodeValue.replace(/[\n\r\t]/g,"");
-					return node;
-				case "child":
-				case "contents":
-					// If allowed childnode, or contentsnode recurse on children, and append
-					cleannode = (nodetype === "child") ? node.cloneNode(false) : document.createDocumentFragment();
-					nodes = node.childNodes;
-					for (i = 0; i < nodes.length; i++) {
-						cleanchild = _textblock.paste.cleanNode(nodes[i]);
-						if (cleanchild)	cleannode.appendChild(cleanchild);
+		handleLast: function (target, source, position) {
+			if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
+				console.log("paste (last):");
+				
+				// If selection is collapsed, then create a new paragraph before merging contents
+				if (ghostedit.selection.saved.data.isCollapsed()) {
+					_textblock.paste.split(target);
+					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+					if (lasso().isSavedRange("ghostedit_paste_end")) {
+						ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 					}
-					return cleannode;
+				}
+				
+				_textblock.mozBrs.clear(source);
+				lasso().removeDOMmarkers("ghostedit_paste_end");
+				source.innerHTML += "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>";
+				
+				if (document.createRange) {
+					ghostedit.selection.saved.data.collapseToEnd().getNative().insertNode( ghostedit.dom.extractContent(source) );
+				}
+				else {
+					ghostedit.selection.saved.data.collapseToEnd().getNative().pasteHTML(source.innerHTML);
+				}
+				
+				return true;
+			}
+			else {
+				return false;
+			}
+		},
+		
+		split: function (target, range) {
+			var blocks, handlestartmarker = false;
+			
+			range = range || ghostedit.selection.saved.data;
+			range = range.clone().collapseToStart();
+			
+			// Check whether target contains a start marker
+			if (ghostedit.dom.isDescendant(target, document.getElementById("ghostedit_paste_start_range_start"))) {
+				handlestartmarker = true;
 			}
 			
-			// Else return false
-			return false;
+			if (handlestartmarker) {
+				lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
+			}
+			
+			blocks = _textblock.split(target, range);
+			
+			if (handlestartmarker) {
+				blocks.block1.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t2'>&#x200b;</span>";
+				_textblock.mozBrs.tidy(blocks.block1);
+			}
+			
+			// Tidy up end marker
+			lasso().removeDOMmarkers("ghostedit_paste_end");
+			blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
+			_textblock.mozBrs.tidy(blocks.block2);
+			
+			return blocks;
 		}
 	};
 	
@@ -972,12 +944,20 @@
 		return block1;
 	};
 	
-	_textblock.split = function (elem) {
-		ghostedit.selection.save();
-		var wheretoinsert, atstart, atend, elemtype, savedElemContent, range, result, newTextBlock, parent, handler;
+	_textblock.split = function (elem, splitpoint) {
+		var wheretoinsert, atstart, atend, elemtype, savedElemContent, range, result, newTextBlock, parent, handler, useselection;
 		
-		atstart = (_textblock.selection.isAtStartOftextblock() === true) ? true : false;
-		atend = (_textblock.selection.isAtEndOftextblock() === true) ? true : false;
+		useselection = false;
+		if (!splitpoint || !splitpoint.isLassoObject) {
+			ghostedit.selection.save();
+			if (ghostedit.selection.saved.type !== "textblock") return false;
+			splitpoint = ghostedit.selection.saved.data;
+			useselection = true;
+		}
+		splitpoint = splitpoint.clone().collapseToStart();
+		
+		atstart = (_textblock.selection.isAtStartOfTextBlock() === true) ? true : false;
+		atend = (_textblock.selection.isAtEndOfTextBlock() === true) ? true : false;
 		wheretoinsert = (atstart && !atend) ? "before" : "after";
 		elemtype = (wheretoinsert === "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
 		
@@ -989,7 +969,7 @@
 		// Save and the delete the content after the caret from the original element
 		if(!atstart && !atend) {//wheretoinsert === "after") {
 			if (document.createRange) {
-				range = lasso().selectNodeContents( elem ).setStartToRangeStart(ghostedit.selection.savedRange); // Odd bug (at least in chrome) where savedRange is already to the end.
+				range = lasso().selectNodeContents( elem ).setStartToRangeStart(splitpoint); // Odd bug (at least in chrome) where savedRange is already to the end.
 				savedElemContent = range.getHTML();
 				range.deleteContents();
 			}
@@ -1000,7 +980,7 @@
 				ghostedit.selection.savedRange.getNative().moveToBookmark(savedrange);
 				range.getNative().setEndPoint("StartToEnd", ghostedit.selection.savedRange.getNative());*/
 				range = lasso().selectNode(elem);
-				range.setStartToRangeEnd(ghostedit.selection.savedRange);
+				range.setStartToRangeEnd(splitpoint);
 				savedElemContent = range.getHTML();
 				range.getNative().text = "";
 			}
@@ -1033,14 +1013,24 @@
 		
 		// Set caret to start of new element
 		if(wheretoinsert === "before") {
-			lasso().setCaretToBlockStart(elem).select();
+			range = lasso().setCaretToBlockStart(elem);
 		}
 		else {
-			lasso().setCaretToBlockStart(newTextBlock).select();
+			range = lasso().setCaretToBlockStart(newTextBlock);
 		}
-		ghostedit.selection.save();
+		
+		// If using selection, set caret to range position
+		if (useselection) {
+			range.select();
+			ghostedit.selection.save();
+		}
+		
 		// block1 = first in dom; block2 = second in dom
-		return {"block1": wheretoinsert === "before" ? newTextBlock : elem, "block2": wheretoinsert === "before" ? elem :newTextBlock};
+		return {
+			"block1": wheretoinsert === "before" ? newTextBlock : elem,
+			"block2": wheretoinsert === "before" ? elem :newTextBlock,
+			"caretposition": range
+		};
 	};
 	
 	_textblock.mozBrs = {		

@@ -5,758 +5,10 @@ Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
 Version:           1.0rc1
-Release Date:      2012-12-27
+Release Date:      2012-12-30
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
-/* Lasso range library version 1.1.0
-
-Name:				Lasso
-Description:			Lightweight, crossbrowser javascript library for creating and modifying ranges. Used by the GhostEdit editor.
-Licence:				Dual licensed under MIT and LGPL licenses.
-Browser Support:		Internet Explorer 6+, Mozilla Firefox 3.5+, Google Chrome, Apple Safari 3+, Opera 10.50+, Any other browser that supports DOMranges or TextRanges
-Author:				Nico Burns <nico@nicoburns.com>
-Website:				http://ghosted.it/lasso
-Version:				1.4.0
-Release Date:			1st July 2012
-
-Changelog:
-Changes to the node selection functions.
-Change to deleteContents() for TextRange browsers (ie)
-Added clearSelection();
-
-Available methods:
-	Native range:
-		setFromNative(nativerange)
-		getNative()
-	Selection:
-		setToSelection()
-		select()
-		clearSelection()
-	Modify range:
-		reset()
-		setStartToRangeStart(lasso object | range)
-		setStartToRangeEnd(lasso object | range)
-		setEndToRangeStart(lasso object | range)
-		setStartToRangeEnd(lasso object | range)
-	Modify content:
-		deleteContents()
-		pasteText(string)
-	Get content:
-		getText()
-		extractText()
-		getHTML()
-		extractHTML()
-	Node/element:
-		selectNode(node)
-		selectNodeContents(node) [only works on block elements in ie8]
-		setCaretToStart(elem | elemid)
-		setCaretToEnd(elem | elemid)
-	Range information:
-		isCollapsed()
-		compareEndPoints()
-		getStartNode()
-		getEndNode()
-		getParentNode()
-		getStartElement()
-		getEndElement()
-	other:
-		clone()
-		saveToDOM()
-		restoreFromDOM()
-		isSavedRange()
-		removeDOMmarkers()
-		bookmarkify() [ie <= 8 only]
-		unbookmarkify() [ie <= 8 only]
-
-Example usage:
-
-	1. Set the caret to the end of an element with ID 'testelem':
-	lasso().setCaretToEnd('testelem').select();
-
-	2. Get the currently selected text
-	lasso().setToSelection().getText();
-*/
-
-window.lasso = function() {
-	//define local range object to be returned at end
-	var r = {
-		saved: null,
-		endpoint: null,
-		startpoint: null,
-		bookmark: null,
-		textrange: false,
-		domrange: false
-	},
-	lasso = window.lasso;
-		
-	r.init = r.reset = r.create = function () {
-		if(document.createRange) {
-			r.textrange = false;
-			r.saved = document.createRange();
-		}
-		else if (document.selection) {
-			r.textrange = true;
-			r.saved = document.body.createTextRange();
-		}
-		r.bookmark = false;
-		r.domrange = !r.textrange;
-		return r;
-	};
-	
-	r.setToEmpty = function () {
-		if (r.domrange) {
-			r.saved = document.createRange();
-		}
-		else if (r.textrange) {
-			r.saved = document.body.createTextRange();
-		}
-		return r;
-	};
-	
-	
-	/* Native Range Functions */
-	
-	r.setFromNative = function (nativerange) {
-		r.saved = nativerange;
-		return r;
-	};
-	
-	r.getNative = function () {
-		return r.saved;
-	};
-	
-	
-	/* Selection Functions */
-	
-	r.setToSelection = function () {
-		var s;
-		if(r.domrange) {
-			s = window.getSelection();
-			if(s.rangeCount > 0) {
-				r.saved = s.getRangeAt(0).cloneRange();
-			}
-		}
-		else if (r.textrange) {
-			r.saved = document.selection.createRange();
-		}
-		return r;
-	};
-	
-	r.select = function () {
-		if (r.domrange) {
-			var s = window.getSelection();
-			if (s.rangeCount > 0) s.removeAllRanges();
-			s.addRange(r.saved);
-		}
-		else if (r.textrange) {
-			r.saved.select();
-		}
-		return r;
-	};
-	
-	r.clearSelection = function () {
-		if (r.domrange) {
-			var s = window.getSelection();
-			if (s.rangeCount > 0) s.removeAllRanges();
-		}
-		else if (r.textrange) {
-			document.selection.empty();
-		}
-		return r;
-	};
-	
-	
-	/* Modify Range Functions */
-	
-	r.collapseToStart = function () {
-		r.saved.collapse(true);
-		return r;
-	};
-	
-	r.collapseToEnd = function () {
-		r.saved.collapse(false);
-		return r;
-	};
-	
-	r.setStartToRangeStart = function (range) {
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.domrange) {
-			r.saved.setStart(range.startContainer, range.startOffset);
-		}
-		else if (r.textrange) {
-			r.saved.setEndPoint("StartToStart", range);
-		}
-		return r;
-	};
-	
-	r.setStartToRangeEnd = function (range) {
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.domrange) {
-			r.saved.setStart(range.endContainer, range.endOffset);
-		}
-		else if (r.textrange) {
-			r.saved.setEndPoint("StartToEnd", range);
-		}
-		return r;
-	};
-	
-	r.setEndToRangeStart = function (range) {
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.domrange) {
-			r.saved.setStart(range.endContainer, range.endOffset);
-		}
-		else if (r.textrange) {
-			r.saved.setEndPoint("EndToStart", range);
-		}
-		return r;
-	};
-	
-	r.setEndToRangeEnd = function (range) {
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.domrange) {
-			r.saved.setEnd(range.endContainer, range.endOffset);
-		}
-		else if (r.textrange) {
-			r.saved.setEndPoint("EndToEnd", range);
-		}
-		return r;
-	};
-	
-	
-	/* Modify Content Functions */
-	
-	r.deleteContents = function () {
-		if (r.domrange) {
-			r.saved.deleteContents();
-		}
-		else if (r.textrange) {
-			/* TextRange deleting seems quite buggy - these *should* work, but text = "" has been most successful so far
-			try {
-				r.saved.pasteHTML("");
-			}
-			catch (e) {
-				r.saved.execCommand("delete");
-			}*/
-			r.saved.text = "";
-		}
-		return r;
-	};
-	
-	r.pasteText = function (text, collapse) {
-		if(typeof collapse === "undefined") collapse = true;
-		
-		r.deleteContents();
-		
-		if (r.domrange) {
-			var txt = document.createTextNode(text);
-			r.saved.insertNode(txt);
-			r.reset().selectNodeContents(txt);
-		}
-		else if (r.textrange) {
-			r.saved.pasteHTML(text);
-		}
-		
-		if (collapse) r.collapseToEnd();
-		r.select();
-		
-		return r;
-	};
-	
-	r.insertNode  = function (node, collapse) {
-		var div;
-		if(typeof collapse === "undefined") collapse = true;
-		
-		r.deleteContents();
-		
-		if (r.domrange) {
-			r.saved.insertNode(node);
-			r.setToEmpty().selectNodeContents(node);
-		}
-		else if (r.textrange) {
-			div = document.createNode("div");
-			div.appendChild(node);
-			r.saved.pasteHTML(div.innerHTML);
-		}
-		
-		if (collapse) r.collapseToEnd();
-		//r.select();
-		
-		return r;
-	};
-	
-	/* Get Content Functions */
-
-	r.getText = function () {
-		if (r.domrange) {
-			return r.saved.toString();
-		}
-		else if (r.textrange) {
-			return r.saved.text;
-		}
-	};
-
-	r.extractText = function () {
-		var text = r.getText();
-		r.deleteContents();
-		return text;
-	};
-	
-	r.getHTML = function () {
-		var tempelem, docfrag;
-		if (r.domrange) {
-			docfrag = r.saved.cloneContents();
-			tempelem = document.createElement("div");
-			tempelem.appendChild(docfrag);
-			return tempelem.innerHTML;
-		}
-		else if (r.textrange) {
-			return r.saved.htmlText;
-		}
-	};
-	
-	r.extractHTML = function () {
-		var html = r.getHTML();
-		r.deleteContents();
-		return html;
-	};
-	
-	
-	/* Node/Element Functions */
-	
-	r.actualSelectNode = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNode(elem);
-		}
-		else if (r.textrange) {
-			r.saved.moveToElementText(elem);
-		}
-		return r;
-	};
-		
-	r.selectNode = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-		}
-		else if (r.textrange) {
-			r.saved.moveToElementText(elem);
-		}
-		return r;
-	};
-	
-	//Only works on block elements in ie8
-	r.selectNodeContents = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		var r1, r2;
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-		}
-		else if (r.textrange) {
-			r.saved.moveToElementText(elem);
-			r1 = lasso().setCaretToStart(elem).getNative();
-			r2 = lasso().setCaretToEnd(elem).getNative();
-			r.saved.setEndPoint("StartToStart", r1);
-			r.saved.setEndPoint("EndToStart", r2);
-		}
-		return r;
-	};
-	
-	r.setCaretToStart = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-			r.saved.collapse(true);
-		}
-		else if (r.textrange) {
-			/*elem.innerHTML = "<span id=\"range_marker\">&#x200b;</span>" + elem.innerHTML;
-			r.selectNode('range_marker');//.deleteContents(); // For some reason .deleteContents() sometimes deletes too much
-			document.getElementById('range_marker').parentNode.removeChild(document.getElementById('range_marker'));*/
-			r.saved.moveToElementText(elem);
-			r.saved.collapse(true);
-		}
-		return r;
-	};
-	
-	r.setCaretToBlockStart = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-			r.saved.collapse(true);
-		}
-		else if (r.textrange) {
-			r.saved.moveToElementText(elem);
-			r.saved.collapse(false);
-			
-			r.saved.move("character", -(elem.innerText.length + 1));
-		}
-		return r;
-	};
-	
-	r.selectInlineStart = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-			r.saved.collapse(true).select();
-		}
-		else if (r.textrange) {
-			elem.innerHTML = "a" + elem.innerHTML; // The 'a' is arbitrary, any single character will work
-    
-			r.saved.moveToElementText(elem);
-			r.saved.collapse(false);
-			
-			r.saved.move("character", -(elem.innerText.length + 1));
-			r.saved.moveEnd("character", 1);
-			r.saved.select();
-			r.saved.text = "";
-		}
-		return r;
-	};
-	
-	r.setCaretToEnd = function (elem) {
-		if(typeof elem === "string") elem = document.getElementById(elem);
-		
-		if (r.domrange) {
-			r.saved.selectNodeContents(elem);
-			r.saved.collapse(false);
-		}
-		else if (r.textrange) {
-			/*elem.innerHTML = elem.innerHTML + "<span id=\"range_marker\">&#x200b;</span>";
-			r.selectNode('range_marker');//.deleteContents();
-			document.getElementById('range_marker').parentNode.removeChild(document.getElementById('range_marker'));*/
-			r.saved.moveToElementText(elem);
-			r.saved.collapse(false);
-		}
-		return r;
-	};
-
-	
-	/* Range Information Functions */
-	
-	r.isCollapsed = function () {
-		if (r.domrange) {
-			return r.saved.collapsed;
-		}
-		else if (r.textrange) {
-			//return r.saved.compareEndPoints("StartToEnd", r.saved) === 0 ? true : false;
-			return r.saved.isEqual(r.clone().collapseToStart().saved);
-		}
-	};
-	
-	r.compareEndPoints = function (how, range) {
-		var R;
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.domrange) {
-			// Note that EndToStart and StartToEnd are reversed (to make compatible with ie order)
-			R = window.Range;
-			var howlookup = {"StartToStart": R.START_TO_START,
-						"StartToEnd": R.END_TO_START,
-						"EndToStart": R.START_TO_END,
-						"EndToEnd": R.END_TO_END};				
-			how = howlookup[how];
-			return r.saved.compareBoundaryPoints(how, range);
-		}
-		else if (r.textrange) {
-			return r.saved.compareEndPoints(how, range);
-		}
-	};
-	
-	r.isEqualTo = function (range) {
-		if (range && range.saved) range = range.getNative();
-		
-		if (r.compareEndPoints("StartToStart", range) !== 0) return false;
-		if (r.compareEndPoints("EndToEnd", range) !== 0) return false;
-		
-		return true;
-	};
-	
-	r.getStartNode = function () {
-		if (r.domrange) {
-			return r.saved.startContainer;
-		}
-		else if (r.textrange) {
-			var range = r.saved.duplicate();
-			range.collapse(true);
-			return range.parentElement();
-		}
-	};
-	
-	r.getEndNode = function () {
-		if (r.domrange) {
-			return r.saved.endContainer;
-		}
-		else if (r.textrange) {
-			var range = r.saved.duplicate();
-			range.collapse(false);
-			return range.parentElement();
-		}
-	};
-	
-	r.getParentNode = function () {
-		if (r.domrange) {
-			return r.saved.commonAncestorContainer;
-		}
-		else if (r.textrange) {
-			return r.saved.parentElement();
-		}
-	};
-	
-	r.getStartElement = function () {
-		return r.util.getParentElement( r.getStartNode() );
-	};
-	
-	r.getEndElement = function () {
-		return r.util.getParentElement( r.getEndNode() );
-	};
-	
-	r.getParentElement = function () {
-		if (r.domrange) {
-			return r.util.getParentElement( r.saved.commonAncestorContainer);
-		}
-		else if (r.textrange) {
-			return r.saved.parentElement();
-		}
-	};
-
-
-	/* Clone Function */
-	
-	r.clone = function () {
-		var r2 = lasso();
-		if(r.domrange) {
-			r2.saved = r.saved.cloneRange();
-		}
-		else if (r.textrange) {
-			r2.saved = r.saved.duplicate();
-		}
-		r2.bookmark = r.cloneBookmark();
-		return r2;
-	};
-	
-	/* Save and Restore Functions */
-	
-	r.saveToDOM = function (id) {
-		var start, end, smark, emark, collapsed;
-		if (!id) id = "lasso";
-		
-		r.removeDOMmarkers(id);
-		
-		collapsed = r.isCollapsed();
-		
-		start = r.clone().collapseToStart().getNative();
-		if (!collapsed) end = r.clone().collapseToEnd().getNative();
-		
-		if (r.domrange) {
-			smark = document.createElement("span");
-			smark.innerHTML = "&#x200b";
-			smark.id = id + "_range_start";
-			start.insertNode(smark);
-			if (!collapsed) {
-				emark = document.createElement("span");
-				emark.innerHTML = "&#x200b";
-				emark.id = id + "_range_end";
-				end.insertNode(emark);
-			}
-		}
-		else if (r.textrange) {
-			start.pasteHTML("<span id=\"" + id + "_range_start\">&#x200b;</span>");
-			if (!collapsed) {
-				end.pasteHTML("<span id=\"" + id + "_range_end\">&#x200b;</span>");
-			}
-		}
-		
-		// Restore in case selection is lost by changing DOM above
-		r = r.restoreFromDOM(id, false) || r.reset();
-		
-		return r;
-	};
-	
-	r.restoreFromDOM = function (id, removemarkers) {
-		var start, end, smark, emark;
-		if (!id || id === "" || id === true || id === false) id = "lasso";
-		if (id === true) removemarkers = true;
-		
-		smark = document.getElementById(id + "_range_start");
-		emark = document.getElementById(id + "_range_end");
-
-		if (!smark) return false;
-		
-		start = lasso().actualSelectNode(smark).collapseToEnd();
-		if (removemarkers !== false) smark.parentNode.removeChild(smark);
-		
-		if (emark) {
-			end= lasso().actualSelectNode(emark).collapseToStart();
-			if (removemarkers !== false) emark.parentNode.removeChild(emark);
-		}
-		else {
-			end = start;
-		}
-		
-		r = lasso().setStartToRangeStart(start).setEndToRangeEnd(end);
-		
-		return r;
-	};
-	
-	r.isSavedRange = function (id) {
-		if (!id) id = "lasso";
-		
-		return (document.getElementById(id + "_range_start")) ? true : false;
-	};
-	
-	r.removeDOMmarkers = function (id) {
-		var smark, emark;
-		if (!id) id = "lasso";
-		
-		smark = document.getElementById(id + "_range_start");
-		emark = document.getElementById(id + "_range_end");
-		
-		if (smark) smark.parentNode.removeChild(smark);
-		if (emark) emark.parentNode.removeChild(emark);
-	};
-	
-	
-	/* IE <= 8 Only Functions */
-	
-	r.bookmarkify = function (rootnode) {
-		if (r.domrange) {
-			var node, startnodeoffsets, endnodeoffsets, b = {};
-			if (!rootnode || !rootnode.nodeType) return r;
-			
-			// Save start and end offset to bookmark
-			b.startoffset = r.saved.startOffset;
-			b.endoffset = r.saved.endOffset;
-			
-			// Get start node offset path relative to rootnode
-			startnodeoffsets = [];
-			node = r.saved.startContainer;
-			while (node !== rootnode) {
-				startnodeoffsets.unshift(r.util.getNodeOffset(node));
-				node = node.parentNode;
-				if (node === null) return r;
-			}
-			
-			// Get end node offset path relative to rootnode
-			endnodeoffsets = [];
-			node = r.saved.endContainer;	
-			while (node !== rootnode) {
-				endnodeoffsets.unshift(r.util.getNodeOffset(node));
-				node = node.parentNode;
-				if (node === null) return r;
-			}
-			
-			// Save paths to bookmark
-			b.startnodeoffsets = startnodeoffsets.join("-");
-			b.endnodeoffsets = endnodeoffsets.join("-");
-			
-			// Save rootnode to bookmark (used to show that bookmark exists)
-			b.rootnode = rootnode;
-			
-			r.bookmark = b;
-		}
-		else if (r.textrange) {
-			r.bookmark = r.saved.getBookmark();
-		}
-		return r;
-	};
-		
-	r.unbookmarkify = function (rootnode) {
-		var bookmark = r.bookmark;
-		if (r.domrange) {
-			var node, offset, startnodeoffsets, endnodeoffsets, startcontainer, endcontainer;
-			if (!bookmark.rootnode || !rootnode) return r.setToEmpty();
-			
-			node = rootnode;
-			startnodeoffsets = bookmark.startnodeoffsets.split("-");
-			while (startnodeoffsets.length > 0) {
-				offset = startnodeoffsets.shift();
-				if (!node.childNodes || !node.childNodes[offset]) return r.setToEmpty();
-				node = node.childNodes[offset];
-			}
-			startcontainer = node;
-			
-			node = rootnode;
-			endnodeoffsets = bookmark.endnodeoffsets.split("-");
-			while (endnodeoffsets.length > 0) {
-				offset = endnodeoffsets.shift();
-				if (!node.childNodes || !node.childNodes[offset]) return r.setToEmpty();
-				node = node.childNodes[offset];
-			}
-			endcontainer = node;
-			
-			r.setToEmpty();
-			r.saved.setStart(startcontainer, bookmark.startoffset);
-			r.saved.setEnd(endcontainer, bookmark.endoffset);
-		}
-		else if (r.textrange) {
-			if (r.bookmark) {
-				r.reset().saved.moveToBookmark(bookmark);
-				r.bookmarkify();
-			}
-		}
-		return r;
-	};
-	
-	r.clearBookmark = function () {
-		r.bookmark = false;
-		return r;
-	};
-	
-	r.cloneBookmark = function (bookmark) {
-		if (!bookmark) bookmark = r.bookmark;
-		if (r.domrange) {
-			return !bookmark ? false : {
-				"rootnode": bookmark.rootnode,
-				"startnodeoffsets": bookmark.startnodeoffsets,
-				"endnodeoffsets": bookmark.endnodeoffsets,
-				"startoffset": bookmark.startoffset,
-				"endoffset": bookmark.endoffset
-			};
-		}
-		else if (r.textrange) {
-			if (!bookmark) return false;
-			var r2 = lasso().getNative();
-			return r2.moveToBookmark(bookmark) ? r2.getBookmark() : false;
-		}
-	};
-	
-	/* Utility, 'non-public' functions, used by other functions */
-	
-	r.util = { //Used only for next two functions (getStartElement and getEndElement)
-		getParentElement: function (node) {
-			if (node.nodeType !== 1) {
-				while (node.nodeType !== 1) {
-					node = node.parentNode;
-					if (node === null) return null;
-				}
-			}
-			return node;
-		},
-		
-		getNodeOffset: function (node) {
-			if (!node || !node.parentNode) return;
-			var offset = 0;
-			while (node.parentNode.childNodes[offset] !== node) {
-				offset += 1;
-			}
-			return offset;
-		}
-	};
-	
-	r.init();
-	return r;
-};
 (function(window, undefined) {
 	// Create ghostedit object and global variables
 	var _ghostedit = {
@@ -2296,9 +1548,12 @@ window.lasso = function() {
 		console.log("test--------------------------------");
 		// Call handler on first pasted node
 		result = false;
-		_paste.trycounter = 0;
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
 		target = ghostedit.selection.saved.data.getParentNode();
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		//ghostedit.selection.saved.data.select();
 		if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
 		while (!result) {
 			if (!target) {
@@ -2310,11 +1565,11 @@ window.lasso = function() {
 			if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
 			
 			position = {"isfirst": true,
-				"islast": (ghostedit.dom.getFirstChildGhostBlock(pastenode) === source) ? true : false,
+				"islast": (ghostedit.dom.getLastChildGhostBlock(pastenode) === source) ? true : false,
 				"collapsed": collapsed};
 			
 			console.log("Call handler: (first)" + handler);
-			console.log(source);
+			console.log(source.cloneNode(true));
 			result = ghostedit.plugins[handler].paste.handle (target, source, position);
 			console.log("result: " + result);
 			if (result) {
@@ -2324,24 +1579,37 @@ window.lasso = function() {
 			}
 			if (!result) target = ghostedit.dom.getParentGhostBlock(target);
 			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			//ghostedit.selection.saved.data.select();
 		}
-
+		
+		
+		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		ghostedit.selection.saved.data.select().inspect();
+		//return;
 		
 		// Call handler on last pasted node
 		source = ghostedit.dom.getLastChildGhostBlock(pastenode);
-		if (source && (collapsed === false || hasmerged === false)) {
-			_paste.trycounter = 0;
+		if (source /*&& (collapsed === false || hasmerged === false)*/) {
 			result = false;
 			
-			if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
+			/*if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
 			}
 			else {
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			}*/
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 			}
-			target = ghostedit.selection.saved.data.getParentNode();
+			target = ghostedit.selection.saved.data.getEndNode();
 			if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
-			
 			while (!result) {
 				
 				//ghostedit.selection.saved.data.select();
@@ -2351,7 +1619,8 @@ window.lasso = function() {
 				if (!ghostedit.plugins[handler] || !ghostedit.plugins[handler].paste) break;
 
 				console.log("Call handler (last): " + handler);
-				console.log(source);
+				console.log(source.cloneNode(true));
+				console.log(target);
 				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": true, "collapsed": collapsed});
 				console.log("result: " + result);
 				if (result) {
@@ -2359,31 +1628,38 @@ window.lasso = function() {
 					break;
 				}
 				if (!result) target = ghostedit.dom.getParentGhostBlock(target);
-				if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
+				/*if(ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", false);
 				}
 				else {
 					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
-				}
-				
-				if (_paste.trycounter++ > 20) return;
-			}
-		}
-		
-		// Loop through remaining nodes
-		console.log(pastenode);
-		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
-		_paste.trycounter = 0;
-		while (source) {
-			result = false;
-			while (!result) {
+				}*/
 				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
 				if (lasso().isSavedRange("ghostedit_paste_end")) {
 					ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 				}
-				ghostedit.selection.saved.data.select();
-				
-				target = ghostedit.selection.saved.data.getParentNode();
+			}
+		}
+		
+		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+		if (lasso().isSavedRange("ghostedit_paste_end")) {
+			ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+		}
+		ghostedit.selection.saved.data.select().inspect();
+		//return;
+		
+		// Loop through remaining nodes
+		console.log(pastenode);
+		source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
+		while (source) {
+			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+			if (lasso().isSavedRange("ghostedit_paste_end")) {
+				ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+			}
+			target = ghostedit.selection.saved.data.getParentNode();
+			result = false;
+			while (!result) {
+				//ghostedit.selection.saved.data.select();
 				if (!ghostedit.dom.isGhostBlock(target)) target = ghostedit.dom.getParentGhostBlock(target);
 				if (!target) break;
 				
@@ -2394,32 +1670,23 @@ window.lasso = function() {
 				console.log(source);
 				result = ghostedit.plugins[handler].paste.handle (target, source, {"isfirst": false, "islast": false, "collapsed": collapsed});
 				console.log("result: " + result);
-				if (_paste.trycounter++ > 20) return;
+				if (result) {
+					source.parentNode.removeChild(source);
+					break;
+				}
+				if (!result) target = ghostedit.dom.getParentGhostBlock(target);
+				ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+				if (lasso().isSavedRange("ghostedit_paste_end")) {
+					ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
+				}
 			}
-			
-			source = ghostedit.dom.getNextSiblingGhostBlock(source);
+			source = ghostedit.dom.getFirstChildGhostBlock(pastenode);
 		}
 		
 		ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", true).select();
 		if (ghostedit.selection.saved.data.isSavedRange("ghostedit_paste_end")) {
 			ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_end", true).select();
 		}
-
-		/*if (!result) {
-			i--;
-			blocks = ghostedit.plugins[handler].split(target);
-			//range = lasso().setStartToRangeStart(lasso().selectNodeContents(blocks.block1));
-			//range.setEndToRangeEnd(lasso().selectNodeContents(blocks.block2));
-			//elem = range.getParentNode();
-			//if (!ghostedit.dom.isGhostBlock(elem)) ghostedit.dom.getParentGhostBlock(elem);
-			target = ghostedit.dom.getParentGhostBlock(blocks.block1);
-			child = blocks.block1;
-			while (!ghostedit.dom.isChildGhostBlock(child, target)) {
-				child = ghostedit.dom.getParentGhostBlock(child);
-			}
-			handler = target.getAttribute("data-ghostedit-handler");
-		}*/
-		
 		ghostedit.selection.save();
 		
 		ghostedit.history.undoData = _paste.savedundodata;
@@ -2463,6 +1730,7 @@ window.lasso = function() {
 		ghostedit.history.undoData = _cut.savedundodata;
 		ghostedit.history.undoPoint = _cut.savedundopoint;
 		ghostedit.history.restoreUndoPoint(ghostedit.history.undoPoint);
+		ghostedit.selection.save();
 		
 		// Delete selection contents if selection is non-collapsed
 		ghostedit.selection.deleteContents();
@@ -2526,7 +1794,7 @@ window.lasso = function() {
 		},
 		
 		backspace: function (block, e) {
-			if (_textblock.selection.isAtStartOftextblock() !== true) {
+			if (_textblock.selection.isAtStartOfTextBlock() !== true) {
 				//Caret not at start of textblock: return true to indicate handled
 				return true;
 			}
@@ -2553,7 +1821,7 @@ window.lasso = function() {
 		
 		deletekey: function (block, e) {
 			//var block = ghostedit.selection.getContainingGhostBlock();
-			if (_textblock.selection.isAtEndOftextblock() !== true) {
+			if (_textblock.selection.isAtEndOfTextBlock() !== true) {
 				//Caret not at end of textblock: return true to indicate handled
 				return true;
 			}
@@ -2692,11 +1960,20 @@ window.lasso = function() {
 		
 		
 		//Assumes selection saved manually
-		isAtStartOftextblock: function () {
-			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode;
+		isAtStartOfTextBlock: function (point) {
+			var caretIsAtStart = false, range, selrange, i, isequal, firstnode, textblocknode, wholenode, tempnode,
+			useselection;
+			
+			// Check if 'point' parameter was passed and is a lasso object, otherwise get selection
+			useselection = false;
+			if (!point || !point.isLassoObject) {
+				if (ghostedit.selection.saved.type !== "textblock") return false;
+				point = ghostedit.selection.saved.data;
+				useselection = true;
+			}
 			
 			if(document.createRange) {
-				range = ghostedit.selection.savedRange;
+				range = point;
 				if(range.isCollapsed() && range.getNative().startOffset === 0) {
 					caretIsAtStart = true;
 					tempnode = ghostedit.selection.savedRange.getStartNode();
@@ -2733,7 +2010,7 @@ window.lasso = function() {
 			}
 			else if (document.selection) {
 				// Bookmarkify range, so DOM modification doesn't break it
-				selrange = ghostedit.selection.savedRange.clone().bookmarkify();
+				selrange = point.clone().bookmarkify();
 				
 				textblocknode = _textblock.selection.getStartTextBlockNode();
 				
@@ -2748,14 +2025,16 @@ window.lasso = function() {
 						caretIsAtStart = true;
 				}
 				
-				ghostedit.selection.savedRange = selrange.select();
+				if (useselection) {
+					ghostedit.selection.savedRange = selrange.select();
+				}
 			}
 			return caretIsAtStart;
 		},
 
 		
 		//Assumes selection saved manually
-		isAtEndOftextblock: function () {
+		isAtEndOfTextBlock: function () {
 			var caretIsAtEnd = false, selrange, range, rangefrag, elemfrag, textblocknode, endpoint;
 			
 			if (!ghostedit.selection.savedRange.isCollapsed()) return false;
@@ -3055,101 +2334,27 @@ window.lasso = function() {
 			
 			// Else return false
 			return false;
-		},
-		
-		parse: function (node) {
-			var cleannode = false, nodes, cleanchild, nodetype, i, text;
-			if (!node || !node.nodeType) return false;
-			
-			nodetype = _textblock.inout.isHandleableNode(node);
-			switch (nodetype) {
-				case "text":
-					// Strip whitespace and tab characters from textnodes
-					text = node.nodeValue.replace(/[\n\r\t]/g,"");
-					// Return node, or false if node is empty
-					return (text.length > 0) ? document.createTextNode(text) : false;
-				case "block":
-				case "child":
-					cleannode = document.createElement(node.tagName.toLowerCase());
-				/*case "contents":
-					Do nothing*/
-			}
-
-			// For 'block', 'child' and 'contents' nodes: recurse on children and append
-			cleannode = cleannode || document.createDocumentFragment();
-			nodes = node.childNodes;
-			for (i = 0; i < nodes.length; i++) {
-				cleanchild = _textblock.inout.parse(nodes[i]);
-				if (cleanchild) cleannode.appendChild(cleanchild);
-			}
-			return cleannode;
 		}
 	};
 	
 	_textblock.paste = {			
 		handle: function (target, source, position) {
-			var blocks;
 			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return;
 			
 			console.log(position);
 			
 			// If source is first pasted element, and was inline content, or is of same type as target, then merge contents into target node
-			// No longer needed because is subset of 'p' check: source.getAttribute("data-ghostedit-importinfo") === "wasinline"
 			if (position.isfirst) {
-				if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
-					console.log("paste (first):");
-					
-					_textblock.mozBrs.clear(source);
-					
-					lasso().removeDOMmarkers("ghostedit_paste_start");
-					source.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t1'>&#x200b;</span>";
-					
-					if (document.createRange) {
-						ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
-					}
-					else {
-						ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
-					}
-					
-					return true;
-				}
-				else {
-					return false;
-				}
+				return _textblock.paste.handleFirst(target, source, position);
 			}
 			
 			if (position.islast) {
-				if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
-					console.log("paste (last-noncollapsed):");
-					
-					_textblock.mozBrs.clear(source);
-					lasso().removeDOMmarkers("ghostedit_paste_end");
-					source.innerHTML += "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>";
-					
-					if (document.createRange) {
-						ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
-					}
-					else {
-						ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
-					}
-					
-					return true;
-				}
-				else {
-					return false;
-				}
+				return _textblock.paste.handleLast(target, source, position);
 			}
 			
-			
-			
-			// If not first element, then split and tidy
-			_textblock.mozBrs.clear(source);
-			ghostedit.selection.saved.data.collapseToStart().select();
-			lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
-			blocks = _textblock.split(target);
-			blocks.block1.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t2'>&#x200b;</span>";
-			_textblock.mozBrs.tidy(blocks.block1);
-			
+			_textblock.paste.split(target);
+			return false;
+						
 			/*if (!position.islast || !(source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) && _textblock.isEmpty(blocks.block2)) {
 				parent = ghostedit.dom.getParentGhostBlock(blocks.block2);
 				handler = parent.getAttribute("data-ghostedit-handler");
@@ -3164,11 +2369,10 @@ window.lasso = function() {
 				return false;
 			}*/
 			
-			//if (position.collapsed) {
-				lasso().removeDOMmarkers("ghostedit_paste_end");
-				blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
-			//}
-			_textblock.mozBrs.tidy(blocks.block2);
+			/*PART OF SPLIT FUNCTION
+			lasso().removeDOMmarkers("ghostedit_paste_end");
+			blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
+			_textblock.mozBrs.tidy(blocks.block2);*/
 			
 			// If source is last pasted element, and was inline content, or is of same type as target, then prepend contents to second node
 			/*if (position.islast && (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName)) {
@@ -3182,55 +2386,91 @@ window.lasso = function() {
 			
 			
 			//DEV console.log(blocks.block1.parentNode.cloneNode(true));
-			
-			return false;
 		},
 		
-		clean: function (target) {
-			var content, cleanchild, i;
-			if (!target || !target.nodeType) return false;
-			
-			// If target is empty, return target
-			if (!target.childNodes) return target;
-			
-			// Else loop through content, getting clean versions of each child node recursively
-			content = document.createDocumentFragment();
-			for (i = 0; i < target.childNodes.length; i++) {
-				cleanchild = _textblock.paste.cleanChild(target.childNodes[i]);
-				if (cleanchild)	content.appendChild(cleanchild);
+		handleFirst: function (target, source, position) {
+			// No longer needed because is subset of 'p' check: source.getAttribute("data-ghostedit-importinfo") === "wasinline"
+			if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
+				console.log("paste (first):");
+				
+				_textblock.mozBrs.clear(source);
+				
+				lasso().removeDOMmarkers("ghostedit_paste_start");
+				source.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t1'>&#x200b;</span>";
+				
+				if (document.createRange) {
+					ghostedit.selection.saved.data.collapseToStart().getNative().insertNode( ghostedit.dom.extractContent(source) );
+				}
+				else {
+					ghostedit.selection.saved.data.collapseToStart().getNative().pasteHTML(source.innerHTML);
+				}
+				
+				return true;
 			}
-			
-			// Replace target content with new content
-			target = target.cloneNode(false);
-			target.appendChild(content);
-			
-			return target;
+			else {
+				return false;
+			}
 		},
 		
-		cleanNode: function (node) {
-			var cleannode, nodes, cleanchild, nodetype, i;
-			if (!node || !node.nodeType) return false;
-			
-			nodetype = _textblock.paste.isHandleableNode(node);
-			switch (nodetype) {
-				case "text":
-					// Strip whitespace and tab characters from textnodes
-					node.nodeValue = node.nodeValue.replace(/[\n\r\t]/g,"");
-					return node;
-				case "child":
-				case "contents":
-					// If allowed childnode, or contentsnode recurse on children, and append
-					cleannode = (nodetype === "child") ? node.cloneNode(false) : document.createDocumentFragment();
-					nodes = node.childNodes;
-					for (i = 0; i < nodes.length; i++) {
-						cleanchild = _textblock.paste.cleanNode(nodes[i]);
-						if (cleanchild)	cleannode.appendChild(cleanchild);
+		handleLast: function (target, source, position) {
+			if (source.tagName.toLowerCase() === "p" || source.tagName === target.tagName) {
+				console.log("paste (last):");
+				
+				// If selection is collapsed, then create a new paragraph before merging contents
+				if (ghostedit.selection.saved.data.isCollapsed()) {
+					_textblock.paste.split(target);
+					ghostedit.selection.saved.data.restoreFromDOM("ghostedit_paste_start", false);
+					if (lasso().isSavedRange("ghostedit_paste_end")) {
+						ghostedit.selection.saved.data.setEndToRangeEnd(lasso().restoreFromDOM("ghostedit_paste_end", false));
 					}
-					return cleannode;
+				}
+				
+				_textblock.mozBrs.clear(source);
+				lasso().removeDOMmarkers("ghostedit_paste_end");
+				source.innerHTML += "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>";
+				
+				if (document.createRange) {
+					ghostedit.selection.saved.data.collapseToEnd().getNative().insertNode( ghostedit.dom.extractContent(source) );
+				}
+				else {
+					ghostedit.selection.saved.data.collapseToEnd().getNative().pasteHTML(source.innerHTML);
+				}
+				
+				return true;
+			}
+			else {
+				return false;
+			}
+		},
+		
+		split: function (target, range) {
+			var blocks, handlestartmarker = false;
+			
+			range = range || ghostedit.selection.saved.data;
+			range = range.clone().collapseToStart();
+			
+			// Check whether target contains a start marker
+			if (ghostedit.dom.isDescendant(target, document.getElementById("ghostedit_paste_start_range_start"))) {
+				handlestartmarker = true;
 			}
 			
-			// Else return false
-			return false;
+			if (handlestartmarker) {
+				lasso().removeDOMmarkers("ghostedit_paste_start");//Must be before split or marker is duplicated
+			}
+			
+			blocks = _textblock.split(target, range);
+			
+			if (handlestartmarker) {
+				blocks.block1.innerHTML += "<span id='ghostedit_paste_start_range_start' class='t2'>&#x200b;</span>";
+				_textblock.mozBrs.tidy(blocks.block1);
+			}
+			
+			// Tidy up end marker
+			lasso().removeDOMmarkers("ghostedit_paste_end");
+			blocks.block2.innerHTML = "<span id='ghostedit_paste_end_range_start'>&#x200b;</span>" + blocks.block2.innerHTML;
+			_textblock.mozBrs.tidy(blocks.block2);
+			
+			return blocks;
 		}
 	};
 	
@@ -3448,12 +2688,20 @@ window.lasso = function() {
 		return block1;
 	};
 	
-	_textblock.split = function (elem) {
-		ghostedit.selection.save();
-		var wheretoinsert, atstart, atend, elemtype, savedElemContent, range, result, newTextBlock, parent, handler;
+	_textblock.split = function (elem, splitpoint) {
+		var wheretoinsert, atstart, atend, elemtype, savedElemContent, range, result, newTextBlock, parent, handler, useselection;
 		
-		atstart = (_textblock.selection.isAtStartOftextblock() === true) ? true : false;
-		atend = (_textblock.selection.isAtEndOftextblock() === true) ? true : false;
+		useselection = false;
+		if (!splitpoint || !splitpoint.isLassoObject) {
+			ghostedit.selection.save();
+			if (ghostedit.selection.saved.type !== "textblock") return false;
+			splitpoint = ghostedit.selection.saved.data;
+			useselection = true;
+		}
+		splitpoint = splitpoint.clone().collapseToStart();
+		
+		atstart = (_textblock.selection.isAtStartOfTextBlock() === true) ? true : false;
+		atend = (_textblock.selection.isAtEndOfTextBlock() === true) ? true : false;
 		wheretoinsert = (atstart && !atend) ? "before" : "after";
 		elemtype = (wheretoinsert === "before" || atend) ? "p" : _textblock.selection.getStartTextBlockNode().tagName;
 		
@@ -3465,7 +2713,7 @@ window.lasso = function() {
 		// Save and the delete the content after the caret from the original element
 		if(!atstart && !atend) {//wheretoinsert === "after") {
 			if (document.createRange) {
-				range = lasso().selectNodeContents( elem ).setStartToRangeStart(ghostedit.selection.savedRange); // Odd bug (at least in chrome) where savedRange is already to the end.
+				range = lasso().selectNodeContents( elem ).setStartToRangeStart(splitpoint); // Odd bug (at least in chrome) where savedRange is already to the end.
 				savedElemContent = range.getHTML();
 				range.deleteContents();
 			}
@@ -3476,7 +2724,7 @@ window.lasso = function() {
 				ghostedit.selection.savedRange.getNative().moveToBookmark(savedrange);
 				range.getNative().setEndPoint("StartToEnd", ghostedit.selection.savedRange.getNative());*/
 				range = lasso().selectNode(elem);
-				range.setStartToRangeEnd(ghostedit.selection.savedRange);
+				range.setStartToRangeEnd(splitpoint);
 				savedElemContent = range.getHTML();
 				range.getNative().text = "";
 			}
@@ -3509,14 +2757,24 @@ window.lasso = function() {
 		
 		// Set caret to start of new element
 		if(wheretoinsert === "before") {
-			lasso().setCaretToBlockStart(elem).select();
+			range = lasso().setCaretToBlockStart(elem);
 		}
 		else {
-			lasso().setCaretToBlockStart(newTextBlock).select();
+			range = lasso().setCaretToBlockStart(newTextBlock);
 		}
-		ghostedit.selection.save();
+		
+		// If using selection, set caret to range position
+		if (useselection) {
+			range.select();
+			ghostedit.selection.save();
+		}
+		
 		// block1 = first in dom; block2 = second in dom
-		return {"block1": wheretoinsert === "before" ? newTextBlock : elem, "block2": wheretoinsert === "before" ? elem :newTextBlock};
+		return {
+			"block1": wheretoinsert === "before" ? newTextBlock : elem,
+			"block2": wheretoinsert === "before" ? elem :newTextBlock,
+			"caretposition": range
+		};
 	};
 	
 	_textblock.mozBrs = {		
@@ -4018,15 +3276,15 @@ window.lasso = function() {
 			
 			// If the first and last elements in the selection are the same type, then merge
 			if(startcblock.getAttribute("data-ghostedit-elemtype") === endcblock.getAttribute("data-ghostedit-elemtype")) {
+				lasso().setToSelection().saveToDOM("ghostedit_container_deleteselection");
 				ghostedit.plugins[startcblock.getAttribute("data-ghostedit-elemtype")].merge(startcblock, endcblock, collapse);
-				if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
+				lasso().restoreFromDOM("ghostedit_container_deleteselection").select();
+				//if (!ghostedit.dom.getParentGhostBlock(endcblock)) lasso().setToSelection().collapseToStart().select();
 				//^^tests whether endcblock is still in the document, i.e. whether a merge took place
 			}
 			
+			// If container has no children left, create empty <p> element
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				/*ghostedit.el.rootnode.innerHTML = "<div id='ghostedit_dummynode' data-ghostedit-elemtype='textblock'>Loading content...</div>";
-				dummynode = document.getElementById('ghostedit_dummynode');
-				lasso().selectNodeContents(dummynode).select();*/
 				container.appendChild(ghostedit.textblock.create("p"));
 			}
 			
@@ -4114,8 +3372,8 @@ window.lasso = function() {
 	_container.paste = {
 		handle: function (target, source, position) {
 			var sel, anchor, newnode, dummy;
-			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return true;
-			if(position.isfirst || position.islast) return false;
+			if (!ghostedit.dom.isGhostBlock(target) || !ghostedit.dom.isGhostBlock(source)) return false;
+			//if (position.isfirst || position.islast) return false;
 			
 			sel = ghostedit.selection.saved.data;
 			anchor = sel.clone().collapseToStart().getParentElement();
