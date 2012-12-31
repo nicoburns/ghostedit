@@ -4,15 +4,15 @@ Description:       An open source JavaScript WYSIWYG editor focused on usability
 Homepage:          http://ghosted.it
 License:           LGPL
 Author:            Nico Burns <nico@nicoburns.com>
-Version:           1.0rc1
-Release Date:      2012-12-30
+Version:           1.0pre
+Release Date:      2012-12-31
 Browser Support:   Internet Explorer 6+, Mozilla Firefox 3.6+, Google Chrome, Apple Safari (latest), Opera (latest)
 */
 
 (function(window, undefined) {
 	// Create ghostedit object and global variables
 	var _ghostedit = {
-		version: "1.0rc1",
+		version: "1.0pre",
 		enabledplugins: [],
 		ready: false,
 		active: false,

@@ -1,7 +1,7 @@
 (function(window, undefined) {
 	// Create ghostedit object and global variables
 	var _ghostedit = {
-		version: "1.0rc1",
+		version: "1.0pre",
 		enabledplugins: [],
 		ready: false,
 		active: false,
