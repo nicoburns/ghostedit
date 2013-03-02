@@ -278,8 +278,8 @@
 		ghostedit.history.saveUndoState();
 		
 		var elem, startpara, endpara;
-		startpara = ghostedit.textblock.selection.getStartTextBlockNode();
-		endpara = ghostedit.textblock.selection.getEndTextBlockNode();
+		startpara = ghostedit.plugins.textblock.selection.getStartTextBlockNode();
+		endpara = ghostedit.plugins.textblock.selection.getEndTextBlockNode();
 		
 		// Loop through selected paragraphs
 		if (startpara && endpara) {

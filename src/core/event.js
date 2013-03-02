@@ -41,19 +41,19 @@
 			break;
 			case 66: //ctrl-b
 				if (e.ctrlKey) {
-					ghostedit.textblock.format.bold ();
+					ghostedit.plugins.textblock.format.bold ();
 					return ghostedit.util.cancelEvent ( e );
 				}
 			break;
 			case 73: //ctrl-i
 				if (e.ctrlKey && !e.shiftKey) {
-					ghostedit.textblock.format.italic ();
+					ghostedit.plugins.textblock.format.italic ();
 					return ghostedit.util.cancelEvent ( e );
 				}
 			break;
 			case 85: //ctrl-u
 				if (e.ctrlKey) {
-					ghostedit.textblock.format.underline ();
+					ghostedit.plugins.textblock.format.underline ();
 					return ghostedit.util.cancelEvent ( e );
 				}
 			break;

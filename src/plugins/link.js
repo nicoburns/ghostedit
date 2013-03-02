@@ -233,7 +233,7 @@
 		//if (ghostedit.selection.saved.type !== "textblock") return false;
 		
 		/*var range = lasso().selectNode(link).select();
-		ghostedit.textblock.format.useCommand("unlink");
+		ghostedit.plugins.textblock.format.useCommand("unlink");
 		range.collapseToEnd().select();
 		_link.unfocus();*/
 		

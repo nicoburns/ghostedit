@@ -160,7 +160,7 @@
 			
 			// If container has no children left, create empty <p> element
 			if (!ghostedit.dom.getFirstChildGhostBlock(container)) {
-				container.appendChild(ghostedit.textblock.create("p"));
+				container.appendChild(ghostedit.plugins.textblock.create("p"));
 			}
 			
 			// Place caret where the selection was
