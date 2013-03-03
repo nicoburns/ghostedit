@@ -761,7 +761,7 @@
 				
 				panelgroup.appendChild(button);
 				
-				button.onclick = function () { ghostedit.api.insert.character(this); };
+				button.onclick = function () { ghostedit.api.insert.character(this.innerHTML); };
 			},
 			
 			textfield: function (panelgroup, def) {
