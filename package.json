@@ -20,7 +20,7 @@
     "url": "https://github.com/nicoburns/ghostedit.git"
   },
   "dependencies": {
-    "lasso": "1.4.0"
+    "lasso": "1.5.0"
   },
   "devDependencies": {
     "grunt": "~0.3.17"
