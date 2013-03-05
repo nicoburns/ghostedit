@@ -89,8 +89,7 @@ module.exports = function(grunt) {
 
 	/* TASKS */
 	//grunt.registerTask("release", "prepare min compass:release");
-	grunt.registerTask('default', ['jshint', 'clean', 'concat:core',
-										'concat:standard', 'uglify:core', 'uglify:standard']);
+	grunt.registerTask('default', ['jshint', 'clean', 'concat', 'uglify:core', 'uglify:standard']);
 	
 	grunt.registerTask('full', ['jshint', 'clean', 'concat', 'uglify']);
 
